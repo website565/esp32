@@ -465,6 +465,7 @@
         wattsContainer.innerHTML = "0";
         batteryBars.forEach(bar => bar.className = 'bar off');
         assistLevel = 1;
+        lightState = false;
         lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
     }
 
@@ -498,7 +499,7 @@
         bleServer.getPrimaryService(bleService)
             .then(service => service.getCharacteristic(ledCharacteristic))
             .then(characteristic => {
-                const data = new Uint8Array([lightState ? 255 : 0]);
+                const data = new Uint8Array([lightState ? 255 : 254]);
                 return characteristic.writeValue(data);
             })
             .then(() => {
@@ -507,7 +508,11 @@
                 bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
                 bleStateContainer.style.color = "#24af37";
             })
-            .catch(error => console.error("Error toggling light:", error));
+            .catch(error => {
+                console.error("Error toggling light:", error);
+                lightState = !lightState; // Revert state on error to keep UI in sync
+                lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+            });
     }
 
     function disconnectDevice() {
