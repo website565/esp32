@@ -6,69 +6,100 @@
   <title>eBike Kontroler</title>
   <style>
     body {
-      background: #f0f0f0;
+      background: #eee;
+      margin: 0;
+      padding: 10px;
+      font-family: sans-serif;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      margin: 0;
-      font-family: "Segoe UI", sans-serif;
-      padding: 10px;
       box-sizing: border-box;
     }
 
-    .controller {
-      background: #2a2a2a;
-      border-radius: 15px;
-      padding: 15px;
-      width: 90vw;
-      max-width: 400px;
-      min-height: 80vh;
+    .connection-buttons {
       display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
-    }
-
-    .buttons {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-around;
+      gap: 10px;
       margin-bottom: 15px;
-      flex-wrap: wrap;
+      width: 90vw;
+      max-width: 360px;
+      justify-content: center;
     }
 
-    .button {
-      background: #b3f443;
-      color: #000;
-      font-weight: bold;
+    .connection-buttons button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #4caf50;
+      color: white;
       border: none;
-      padding: 12px;
-      font-size: 1.2rem;
-      margin: 5px;
-      border-radius: 4px;
-      width: 50px;
-      text-align: center;
+      border-radius: 8px;
       cursor: pointer;
       flex: 1;
-      max-width: 60px;
+      max-width: 150px;
     }
 
-    .button.disconnect {
-      background: #d13a30;
+    .connection-buttons .disconnect-btn {
+      background-color: #f44336;
     }
 
-    .button.connect {
-      background: #1e90ff;
-    }
-
-    .button:hover {
+    .connection-buttons button:hover {
       opacity: 0.9;
     }
 
-    .screen {
+    .lcd-container {
+      background: #2a2a2a;
+      border-radius: 20px;
+      padding: 15px;
+      display: flex;
+      flex-direction: row;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      width: 90vw;
+      max-width: 360px;
+      min-height: 70vh;
+    }
+
+    .lcd-buttons {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-right: 10px;
+    }
+
+    .lcd-buttons .button-group-top,
+    .lcd-buttons .button-group-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .lcd-buttons button {
+      background: #b3f443;
+      border: none;
+      padding: 10px;
+      font-size: 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 50px;
+      height: 50px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lcd-buttons button:hover {
+      opacity: 0.9;
+    }
+
+    .lcd-buttons #lightButton svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .lcd-screen {
       background: #000;
       color: #0ff;
-      border-radius: 10px;
+      border-radius: 15px;
       padding: 15px;
       flex: 1;
       font-family: monospace;
@@ -81,6 +112,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 10px;
     }
 
     .battery {
@@ -91,12 +123,12 @@
     .battery-bars {
       display: flex;
       gap: 2px;
-      margin-right: 5px;
+      margin-right: 8px;
     }
 
     .bar {
       width: 5px;
-      height: 15px;
+      height: 18px;
       background: #0f0;
     }
 
@@ -108,10 +140,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin: 15px 0;
     }
 
-    .assist {
-      font-size: 2rem;
+    .left-box {
+      font-size: 1.8rem;
+      text-align: center;
     }
 
     .speed {
@@ -123,64 +157,103 @@
       vertical-align: super;
     }
 
-    .odo, .trip, .watts, .voltage, .status {
-      font-size: 1rem;
-      color: #0ff;
+    .odo-trip {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-top: 8px;
     }
 
-    .km, .watt-unit, .volt-unit {
-      color: #0ff;
-      margin-left: 5px;
+    .watt-section {
+      text-align: right;
+      margin-top: 8px;
+      font-size: 1rem;
+    }
+
+    .status-section {
+      text-align: right;
+      margin-top: 8px;
+      font-size: 0.9rem;
     }
 
     .label {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       color: #aaa;
-      width: 80px;
+    }
+
+    .km, .volt-unit, .watt-unit {
+      color: #0ff;
+      margin-left: 4px;
     }
 
     @media (max-width: 600px) {
-      .controller {
+      .lcd-container {
         width: 95vw;
-        min-height: 85vh;
+        min-height: 75vh;
       }
 
-      .button {
-        font-size: 1rem;
-        padding: 10px;
+      .connection-buttons button {
+        font-size: 0.9rem;
+        padding: 8px 15px;
+      }
+
+      .lcd-buttons button {
         width: 45px;
+        height: 45px;
+        font-size: 1rem;
+      }
+
+      .lcd-buttons #lightButton svg {
+        width: 20px;
+        height: 20px;
       }
 
       .speed {
         font-size: 2.5rem;
       }
 
-      .assist {
-        font-size: 1.8rem;
+      .left-box {
+        font-size: 1.6rem;
       }
 
-      .odo, .trip, .watts, .voltage, .status {
-        font-size: 0.9rem;
+      .odo-trip, .watt-section, .status-section {
+        font-size: 0.8rem;
       }
 
       .label {
-        font-size: 0.7rem;
+        font-size: 0.6rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="controller">
-    <div class="buttons">
-      <div class="button connect" id="connectButton">C</div>
-      <div class="button" id="assistPlusButton">+</div>
-      <div class="button" id="assistMinusButton">-</div>
-      <div class="button" id="lightButton">G</div>
-      <div class="button disconnect" id="disconnectButton">I</div>
+  <!-- Dugmad za povezivanje -->
+  <div class="connection-buttons">
+    <button id="connectButton">Connect</button>
+    <button id="disconnectButton" class="disconnect-btn">Disconnect</button>
+  </div>
+
+  <!-- LCD Display + dugmad unutar njega -->
+  <div class="lcd-container">
+    <!-- Dugmad unutar LCD-a -->
+    <div class="lcd-buttons">
+      <div class="button-group-top">
+        <button id="assistPlusButton">+</button>
+        <button id="assistMinusButton">−</button>
+      </div>
+      <div class="button-group-bottom">
+        <button id="lightButton" title="Svjetlo">
+          <svg viewBox="0 0 24 24" fill="#808080">
+            <path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/>
+          </svg>
+        </button>
+        <button id="infoButton">i</button>
+      </div>
     </div>
-    <div class="screen">
+
+    <!-- Ekran -->
+    <div class="lcd-screen">
       <div class="row">
-        <div class="label">BATTERY</div>
         <div class="battery">
           <div class="battery-bars">
             <div class="bar" id="bar1"></div>
@@ -188,34 +261,36 @@
             <div class="bar" id="bar3"></div>
             <div class="bar" id="bar4"></div>
             <div class="bar" id="bar5"></div>
-            <div class="bar" id="bar6"></div>
           </div>
           <span id="voltage">0</span><span class="volt-unit">V</span>
         </div>
       </div>
-      <div class="row">
-        <div class="label">ASSIST</div>
-        <div class="assist" id="assist">1</div>
+
+      <div class="speed-section">
+        <div class="left-box">
+          <div id="assist">1</div>
+          <div class="label">ASSIST</div>
+        </div>
+        <div>
+          <div class="label" style="text-align:right;">SPEED</div>
+          <div class="speed" id="speed">0<span class="speed-decimal" id="speedDecimal">0</span></div>
+          <div style="text-align:right;"><span class="km">KM/H</span></div>
+        </div>
       </div>
-      <div class="row">
-        <div class="label">SPEED</div>
-        <div class="speed" id="speed">0<span class="speed-decimal" id="speedDecimal">0</span><span class="km">KM/H</span></div>
+
+      <div class="odo-trip">
+        <div><span class="label">ODO</span><br><span id="odometer">0</span><span class="km">KM</span></div>
+        <div><span class="label">TRIP</span><br><span id="trip">0</span><span class="km">KM</span></div>
       </div>
-      <div class="row">
-        <div class="label">ODO</div>
-        <div class="odo"><span id="odometer">0</span><span class="km">KM</span></div>
+
+      <div class="watt-section">
+        <div><span class="label">WATT</span></div>
+        <div><span id="watts">0</span><span class="watt-unit">W</span></div>
       </div>
-      <div class="row">
-        <div class="label">TRIP</div>
-        <div class="trip"><span id="trip">0</span><span class="km">KM</span></div>
-      </div>
-      <div class="row">
-        <div class="label">WATTS</div>
-        <div class="watts"><span id="watts">0</span><span class="watt-unit">W</span></div>
-      </div>
-      <div class="row">
-        <div class="label">STATUS</div>
-        <div class="status"><span id="bleState">Disconnected</span></div>
+
+      <div class="status-section">
+        <div><span class="label">STATUS</span></div>
+        <div><span id="bleState">Disconnected</span></div>
       </div>
     </div>
   </div>
@@ -225,6 +300,7 @@
     const assistPlusButton = document.getElementById('assistPlusButton');
     const assistMinusButton = document.getElementById('assistMinusButton');
     const lightButton = document.getElementById('lightButton');
+    const infoButton = document.getElementById('infoButton');
     const disconnectButton = document.getElementById('disconnectButton');
     const bleStateContainer = document.getElementById('bleState');
     const speedContainer = document.getElementById('speed');
@@ -239,8 +315,7 @@
         document.getElementById('bar2'),
         document.getElementById('bar3'),
         document.getElementById('bar4'),
-        document.getElementById('bar5'),
-        document.getElementById('bar6')
+        document.getElementById('bar5')
     ];
 
     // Define BLE Device Specs
@@ -269,6 +344,9 @@
     assistPlusButton.addEventListener('click', () => adjustAssistLevel(1));
     assistMinusButton.addEventListener('click', () => adjustAssistLevel(-1));
     lightButton.addEventListener('click', toggleLight);
+    infoButton.addEventListener('click', () => {
+        window.alert("eBike Kontroler\nVerzija: 1.0\nPovezivanje putem BLE sa ESP32");
+    });
     disconnectButton.addEventListener('click', disconnectDevice);
 
     function isWebBluetoothEnabled() {
@@ -298,13 +376,13 @@
                 bleStateContainer.style.color = "#d13a30";
                 resetDisplay();
                 bleServer = null;
-                lightButton.textContent = "G";
+                lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
             });
             return device.gatt.connect();
         })
         .then(server => {
             bleServer = server;
-            lightButton.textContent = "G (OFF)";
+            lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
             return server.getPrimaryService(bleService);
         })
         .then(service => {
@@ -347,8 +425,8 @@
         speedContainer.innerHTML = speedInt;
         speedDecimalContainer.innerHTML = speedDec;
 
-        // Update battery bars (0-100%, mapped to 0-6 bars)
-        const barsOn = Math.round((battery / 100) * 6);
+        // Update battery bars (0-100%, mapped to 0-5 bars)
+        const barsOn = Math.round((battery / 100) * 5);
         batteryBars.forEach((bar, index) => {
             bar.className = index < barsOn ? 'bar' : 'bar off';
         });
@@ -381,6 +459,7 @@
         wattsContainer.innerHTML = "0";
         batteryBars.forEach(bar => bar.className = 'bar off');
         assistLevel = 1;
+        lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
     }
 
     function adjustAssistLevel(change) {
@@ -418,7 +497,7 @@
             })
             .then(() => {
                 console.log("Light set to:", lightState ? "ON" : "OFF");
-                lightButton.textContent = `G (${lightState ? "ON" : "OFF"})`;
+                lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
                 bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
                 bleStateContainer.style.color = "#24af37";
             })
@@ -430,7 +509,6 @@
             bleStateContainer.innerHTML = "Disconnected";
             bleStateContainer.style.color = "#d13a30";
             resetDisplay();
-            lightButton.textContent = "G";
 
             if (sensorCharacteristicFound) {
                 sensorCharacteristicFound.stopNotifications()
