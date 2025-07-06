@@ -44,6 +44,7 @@
     // Global Variables
     let bleServer;
     let ledState = false;
+    let deviceNameConnected = '';
 
     // Toggle button click event
     connectButton.addEventListener('click', () => {
@@ -73,7 +74,8 @@
             optionalServices: [bleService]
         })
         .then(device => {
-            bleStateContainer.innerHTML = 'Connected to ' + device.name;
+            deviceNameConnected = device.name;
+            bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
             bleStateContainer.style.color = "#24af37";
             device.addEventListener('gattservicedisconnected', () => {
                 bleStateContainer.innerHTML = "Disconnected";
@@ -114,25 +116,32 @@
             .then(() => {
                 console.log("LED set to:", ledState ? "ON" : "OFF");
                 connectButton.textContent = `Toggle LED (${ledState ? "ON" : "OFF"})`;
+                bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
+                bleStateContainer.style.color = "#24af37";
             })
             .catch(error => console.error("Error toggling LED:", error));
     }
 
     function disconnectDevice() {
         if (bleServer && bleServer.connected) {
+            // Update UI immediately
+            bleStateContainer.innerHTML = "Disconnected";
+            bleStateContainer.style.color = "#d13a30";
+            connectButton.textContent = "Connect & Toggle LED";
+            
             bleServer.disconnect()
                 .then(() => {
                     console.log("Device Disconnected");
-                    bleStateContainer.innerHTML = "Disconnected";
-                    bleStateContainer.style.color = "#d13a30";
                     bleServer = null;
-                    connectButton.textContent = "Connect & Toggle LED";
                 })
                 .catch(error => {
                     console.error("Error disconnecting:", error);
+                    bleStateContainer.innerHTML = "Error disconnecting";
                 });
         } else {
             window.alert("Bluetooth is not connected.");
+            bleStateContainer.innerHTML = "Disconnected";
+            bleStateContainer.style.color = "#d13a30";
         }
     }
 </script>
