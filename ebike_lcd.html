@@ -1,324 +1,301 @@
 <!DOCTYPE html>
 <html lang="hr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>eBike Kontroler</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lebo Display</title>
   <style>
     body {
-      background: #eee;
+      background-color: #000;
+      font-family: 'Arial', sans-serif;
       margin: 0;
       padding: 10px;
-      font-family: sans-serif;
+      color: white;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
       min-height: 100vh;
       box-sizing: border-box;
     }
-
     .connection-buttons {
       display: flex;
       gap: 10px;
-      margin-bottom: 15px;
-      width: 90vw;
+      margin-bottom: 10px;
+      width: 100%;
       max-width: 360px;
       justify-content: center;
     }
-
     .connection-buttons button {
-      padding: 10px 20px;
-      font-size: 1rem;
-      background-color: #4caf50;
-      color: white;
+      background-color: #00ff99;
       border: none;
-      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 1.2em;
+      border-radius: 5px;
       cursor: pointer;
       flex: 1;
       max-width: 150px;
     }
-
     .connection-buttons .disconnect-btn {
-      background-color: #f44336;
+      background-color: #ff3333;
     }
-
     .connection-buttons button:hover {
       opacity: 0.9;
     }
-
-    .lcd-container {
-      background: #2a2a2a;
-      border-radius: 20px;
-      padding: 15px;
-      display: flex;
-      flex-direction: row;
-      box-shadow: 0 0 20px rgba(0,0,0,0.4);
-      width: 90vw;
+    .display {
+      width: 100%;
       max-width: 360px;
-      min-height: 70vh;
-    }
-
-    .lcd-buttons {
+      height: 100%;
+      background-color: #111;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      margin-right: 10px;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
     }
-
-    .lcd-buttons .button-group-top,
-    .lcd-buttons .button-group-bottom {
+    .battery-time {
       display: flex;
-      flex-direction: column;
-      gap: 5px;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      font-size: 1.2em;
     }
-
-    .lcd-buttons button {
-      background: #b3f443;
+    .light-button {
+      background-color: #00ff99;
       border: none;
-      padding: 10px;
-      font-size: 1.2rem;
-      border-radius: 6px;
+      padding: 5px;
+      border-radius: 5px;
       cursor: pointer;
-      width: 50px;
-      height: 50px;
-      font-weight: bold;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 30px;
+      height: 30px;
     }
-
-    .lcd-buttons button:hover {
+    .light-button svg {
+      width: 20px;
+      height: 20px;
+    }
+    .light-button:hover {
       opacity: 0.9;
     }
-
-    .lcd-buttons #lightButton svg {
-      width: 24px;
-      height: 24px;
-    }
-
-    .lcd-screen {
-      background: #000;
-      color: #0ff;
-      border-radius: 15px;
-      padding: 15px;
-      flex: 1;
-      font-family: monospace;
+    .circle-wrapper {
+      position: relative;
+      width: 240px;
+      height: 300px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      justify-content: center;
     }
-
-    .row {
+    .circle-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+    .power-circle {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: conic-gradient(#00ff99 0% 0%, #333 0%);
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .power-inner-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: transparent;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .gap-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #000;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 3;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .speed-circle {
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: conic-gradient(#00ff99 0% 0%, #333 0%);
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 4;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .inner-circle {
+      width: 150px;
+      height: 150px;
+      background-color: #000;
+      border-radius: 50%;
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 5;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .value-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 6;
+    }
+    .speed-value, .power-value {
+      font-size: 1.8em;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .speed-unit, .power-unit {
+      font-size: 0.8em;
+      line-height: 1;
+    }
+    .bottom-info {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
+      width: 100%;
+      margin-top: 10px;
     }
-
-    .battery {
-      display: flex;
-      align-items: center;
-    }
-
-    .battery-bars {
-      display: flex;
-      gap: 2px;
-      margin-right: 8px;
-    }
-
-    .bar {
-      width: 5px;
-      height: 18px;
-      background: #0f0;
-    }
-
-    .bar.off {
-      background: #555;
-    }
-
-    .speed-section {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 15px 0;
-    }
-
-    .left-box {
-      font-size: 3rem;
+    .trip, .odo {
       text-align: center;
+      font-size: 1.2em;
+      flex: 1;
     }
-
-    .speed {
-      font-size: 3rem;
-    }
-
-    .speed-decimal {
-      font-size: 1rem;
-      vertical-align: super;
-    }
-
-    .odo-trip {
+    .assist-section {
       display: flex;
-      justify-content: space-between;
-      font-size: 1.1rem;
-      margin-top: 8px;
+      flex-direction: column;
+      align-items: center;
     }
-
-    .watt-section {
-      text-align: right;
-      margin-top: 8px;
-      font-size: 3rem;
+    .assist-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 3px solid #00ff99;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8em;
+      font-weight: bold;
+      margin: 5px 0;
     }
-
-    .status-section {
-      text-align: right;
-      margin-top: 8px;
-      font-size: 0.9rem;
+    .assist-buttons button {
+      background-color: #00ff99;
+      border: none;
+      padding: 7.5px 15px;
+      margin: 3px;
+      font-size: 1.8em;
+      border-radius: 5px;
+      cursor: pointer;
     }
-
-    .label {
-      font-size: 0.7rem;
-      color: #aaa;
+    .status-display {
+      font-size: 1em;
+      text-align: center;
+      padding-bottom: 10px;
     }
-
-    .km, .volt-unit, .watt-unit {
-      color: #0ff;
-      margin-left: 4px;
+    .status-display.connected {
+      color: #00ff99;
     }
-
-    @media (max-width: 600px) {
-      .lcd-container {
-        width: 95vw;
-        min-height: 75vh;
-      }
-
-      .connection-buttons button {
-        font-size: 0.9rem;
-        padding: 8px 15px;
-      }
-
-      .lcd-buttons button {
-        width: 45px;
-        height: 45px;
-        font-size: 1rem;
-      }
-
-      .lcd-buttons #lightButton svg {
-        width: 20px;
-        height: 20px;
-      }
-
-      .speed, .left-box, .watt-section {
-        font-size: 2.5rem;
-      }
-
-      .odo-trip {
-        font-size: 1rem;
-      }
-
-      .status-section {
-        font-size: 0.8rem;
-      }
-
-      .label {
-        font-size: 0.6rem;
-      }
+    .status-display.disconnected {
+      color: #ff3333;
     }
   </style>
 </head>
 <body>
-  <!-- Dugmad za povezivanje -->
   <div class="connection-buttons">
     <button id="connectButton">Connect</button>
     <button id="disconnectButton" class="disconnect-btn">Disconnect</button>
   </div>
-
-  <!-- LCD Display + dugmad unutar njega -->
-  <div class="lcd-container">
-    <!-- Dugmad unutar LCD-a -->
-    <div class="lcd-buttons">
-      <div class="button-group-top">
-        <button id="assistPlusButton">+</button>
-        <button id="assistMinusButton">−</button>
-      </div>
-      <div class="button-group-bottom">
-        <button id="lightButton" title="Svjetlo">
-          <svg viewBox="0 0 24 24" fill="#808080">
-            <path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/>
-          </svg>
-        </button>
-        <button id="infoButton">i</button>
+  <div class="display">
+    <div class="battery-time">
+      <div id="batteryDisplay">🔋 0%</div>
+      <button id="lightButton" class="light-button">
+        <svg viewBox="0 0 24 24" fill="#808080">
+          <path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/>
+        </svg>
+      </button>
+      <div id="clockDisplay">00:00</div>
+    </div>
+    <div class="circle-wrapper">
+      <div class="circle-container">
+        <div class="power-circle" id="powerCircle"></div>
+        <div class="power-inner-circle"></div>
+        <div class="gap-circle"></div>
+        <div class="speed-circle" id="speedCircle"></div>
+        <div class="inner-circle"></div>
+        <div class="value-container">
+          <div class="speed-value" id="speedDisplay">0.0</div>
+          <div class="speed-unit">km/h</div>
+          <div class="power-value" id="powerDisplay">0</div>
+          <div class="power-unit">W</div>
+        </div>
       </div>
     </div>
-
-    <!-- Ekran -->
-    <div class="lcd-screen">
-      <div class="row">
-        <div class="battery">
-          <div class="battery-bars">
-            <div class="bar" id="bar1"></div>
-            <div class="bar" id="bar2"></div>
-            <div class="bar" id="bar3"></div>
-            <div class="bar" id="bar4"></div>
-            <div class="bar" id="bar5"></div>
-          </div>
-          <span id="voltage">0</span><span class="volt-unit">V</span>
+    <div class="bottom-info">
+      <div class="trip">
+        <div id="tripDisplay">0.0 km</div>
+        <div>TRIP</div>
+      </div>
+      <div class="assist-section">
+        <div class="assist-buttons">
+          <button id="assistPlusButton">+</button>
+        </div>
+        <div class="assist-circle" id="assistDisplay">0</div>
+        <div class="assist-buttons">
+          <button id="assistMinusButton">−</button>
         </div>
       </div>
-
-      <div class="speed-section">
-        <div class="left-box">
-          <div id="assist">1</div>
-          <div class="label">ASSIST</div>
-        </div>
-        <div>
-          <div class="label" style="text-align:right;">SPEED</div>
-          <div class="speed" id="speed">0<span class="speed-decimal" id="speedDecimal">0</span></div>
-          <div style="text-align:right;"><span class="km">KM/H</span></div>
-        </div>
-      </div>
-
-      <div class="odo-trip">
-        <div><span class="label">ODO</span><br><span id="odometer">0</span><span class="km">KM</span></div>
-        <div><span class="label">TRIP</span><br><span id="trip">0</span><span class="km">KM</span></div>
-      </div>
-
-      <div class="watt-section">
-        <div><span class="label">WATT</span></div>
-        <div><span id="watts">0</span><span class="watt-unit">W</span></div>
-      </div>
-
-      <div class="status-section">
-        <div><span class="label">STATUS</span></div>
-        <div><span id="bleState">Disconnected</span></div>
+      <div class="odo">
+        <div id="odoDisplay">0 km</div>
+        <div>ODO</div>
       </div>
     </div>
+    <div id="statusDisplay" class="status-display disconnected">Disconnected</div>
   </div>
-
-<script>
+  <script>
+    // DOM Elements
     const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
     const assistPlusButton = document.getElementById('assistPlusButton');
     const assistMinusButton = document.getElementById('assistMinusButton');
     const lightButton = document.getElementById('lightButton');
-    const infoButton = document.getElementById('infoButton');
-    const disconnectButton = document.getElementById('disconnectButton');
-    const bleStateContainer = document.getElementById('bleState');
-    const speedContainer = document.getElementById('speed');
-    const speedDecimalContainer = document.getElementById('speedDecimal');
-    const voltageContainer = document.getElementById('voltage');
-    const assistContainer = document.getElementById('assist');
-    const odometerContainer = document.getElementById('odometer');
-    const tripContainer = document.getElementById('trip');
-    const wattsContainer = document.getElementById('watts');
-    const batteryBars = [
-        document.getElementById('bar1'),
-        document.getElementById('bar2'),
-        document.getElementById('bar3'),
-        document.getElementById('bar4'),
-        document.getElementById('bar5')
-    ];
+    const assistDisplay = document.getElementById("assistDisplay");
+    const speedDisplay = document.getElementById("speedDisplay");
+    const speedCircle = document.getElementById("speedCircle");
+    const powerDisplay = document.getElementById("powerDisplay");
+    const powerCircle = document.getElementById("powerCircle");
+    const clockDisplay = document.getElementById("clockDisplay");
+    const batteryDisplay = document.getElementById("batteryDisplay");
+    const tripDisplay = document.getElementById("tripDisplay");
+    const odoDisplay = document.getElementById("odoDisplay");
+    const statusDisplay = document.getElementById("statusDisplay");
 
-    // Define BLE Device Specs
+    // BLE Device Specs
     const deviceName = 'ESP32';
     const bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
     const sensorCharacteristic = '19b10001-e8f2-537e-4f6c-d104768a1214';
@@ -328,230 +305,246 @@
     let bleServer;
     let bleServiceFound;
     let sensorCharacteristicFound;
+    let assistLevel = 0;
     let lightState = false;
-    let assistLevel = 1;
-    let deviceNameConnected = '';
-    let cachedDevice = null; // Cache for the selected device
+    let cachedDevice = null;
 
-    // Button event listeners
+    // Button Event Listeners
     connectButton.addEventListener('click', () => {
         if (bleServer && bleServer.connected) {
             console.log("Already connected");
-            bleStateContainer.innerHTML = 'Already connected to ' + deviceNameConnected;
+            statusDisplay.textContent = "Connected to ESP32";
+            statusDisplay.className = "status-display connected";
         } else {
             connectToDevice();
         }
     });
 
-    assistPlusButton.addEventListener('click', () => adjustAssistLevel(1));
-    assistMinusButton.addEventListener('click', () => adjustAssistLevel(-1));
-    lightButton.addEventListener('click', toggleLight);
-    infoButton.addEventListener('click', () => {
-        window.alert("eBike Kontroler\nVerzija: 1.0\nPovezivanje putem BLE sa ESP32");
-    });
     disconnectButton.addEventListener('click', disconnectDevice);
+    assistPlusButton.addEventListener('click', () => changeAssist(1));
+    assistMinusButton.addEventListener('click', () => changeAssist(-1));
+    lightButton.addEventListener('click', toggleLight);
 
+    // Clock Update
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      clockDisplay.textContent = `${hours}:${minutes}`;
+    }
+
+    // Assist Level Update
+    function changeAssist(delta) {
+      assistLevel += delta;
+      if (assistLevel < 0) assistLevel = 0;
+      if (assistLevel > 9) assistLevel = 9;
+      assistDisplay.textContent = assistLevel;
+
+      if (bleServer && bleServer.connected) {
+        bleServer.getPrimaryService(bleService)
+          .then(service => service.getCharacteristic(ledCharacteristic))
+          .then(characteristic => {
+            const data = new Uint8Array([assistLevel]);
+            return characteristic.writeValue(data);
+          })
+          .then(() => console.log("Assist level set to:", assistLevel))
+          .catch(error => {
+            console.error("Error setting assist level:", error);
+            statusDisplay.textContent = "Error setting assist level";
+            statusDisplay.className = "status-display disconnected";
+          });
+      } else {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+      }
+    }
+
+    // Light Toggle
+    function toggleLight() {
+      if (!bleServer || !bleServer.connected) {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+        return;
+      }
+
+      lightState = !lightState;
+      bleServer.getPrimaryService(bleService)
+        .then(service => service.getCharacteristic(ledCharacteristic))
+        .then(characteristic => {
+          const data = new Uint8Array([lightState ? 255 : 254]);
+          return characteristic.writeValue(data);
+        })
+        .then(() => {
+          console.log("Light set to:", lightState ? "ON" : "OFF");
+          lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+          statusDisplay.textContent = "Connected to ESP32";
+          statusDisplay.className = "status-display connected";
+        })
+        .catch(error => {
+          console.error("Error toggling light:", error);
+          lightState = !lightState; // Revert state on error
+          lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+          statusDisplay.textContent = "Error toggling light";
+          statusDisplay.className = "status-display disconnected";
+        });
+    }
+
+    // Speed Update
+    function updateSpeed(speed) {
+      speedDisplay.textContent = speed.toFixed(1);
+      const speedPercent = Math.min((speed / 100) * 100, 100);
+      speedCircle.style.background = `conic-gradient(#00ff99 0% ${speedPercent}%, #333 ${speedPercent}% 100%)`;
+    }
+
+    // Power Update
+    function updatePower(power) {
+      powerDisplay.textContent = Math.round(power);
+      const powerPercent = Math.min((power / 1000) * 100, 100);
+      let color = '#00ff99'; // Green for low power
+      if (power > 700) color = 'red';
+      else if (power > 300) color = 'orange';
+      powerCircle.style.background = `conic-gradient(${color} 0% ${powerPercent}%, #333 ${powerPercent}% 100%)`;
+      powerDisplay.style.color = color;
+    }
+
+    // Battery, Trip, and Odo Update
+    function updateDisplay(battery, trip, odo) {
+      batteryDisplay.textContent = `🔋 ${Math.round(battery)}%`;
+      tripDisplay.textContent = `${trip.toFixed(1)} km`;
+      odoDisplay.textContent = `${Math.round(odo)} km`;
+    }
+
+    // BLE Functions
     function isWebBluetoothEnabled() {
-        if (!navigator.bluetooth) {
-            bleStateContainer.innerHTML = "Web Bluetooth not supported!";
-            return false;
-        }
-        return true;
+      if (!navigator.bluetooth) {
+        statusDisplay.textContent = "Web Bluetooth is not supported in this browser. Use Chrome, Edge, or Opera with HTTPS or file://";
+        statusDisplay.className = "status-display disconnected";
+        return false;
+      }
+      return true;
     }
 
     async function connectToDevice() {
-        if (!isWebBluetoothEnabled()) return;
+      if (!isWebBluetoothEnabled()) return;
 
-        // Reset display values on new connection
-        resetDisplay();
+      // Reset display values
+      resetDisplay();
 
-        try {
-            let device;
-            if (cachedDevice && cachedDevice.gatt) {
-                // Try to reconnect to the cached device
-                console.log("Attempting to reconnect to cached device:", cachedDevice.name);
-                bleStateContainer.innerHTML = 'Reconnecting to ' + cachedDevice.name;
-                device = cachedDevice;
-            } else {
-                // Request a new device (user must select ESP32)
-                // Note: Web Bluetooth requires user interaction for security, so the popup is unavoidable on first connection
-                bleStateContainer.innerHTML = 'Select ESP32 in the popup';
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{name: deviceName}],
-                    optionalServices: [bleService]
-                });
-                cachedDevice = device; // Cache the device
-            }
-
-            deviceNameConnected = device.name;
-            bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
-            bleStateContainer.style.color = "#24af37";
-
-            device.addEventListener('gattservicedisconnected', () => {
-                bleStateContainer.innerHTML = "Disconnected";
-                bleStateContainer.style.color = "#d13a30";
-                resetDisplay();
-                bleServer = null;
-                lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
-            });
-
-            bleServer = await device.gatt.connect();
-            lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
-
-            bleServiceFound = await bleServer.getPrimaryService(bleService);
-            sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
-            sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
-            await sensorCharacteristicFound.startNotifications();
-            const value = await sensorCharacteristicFound.readValue();
-            handleDataUpdate(new TextDecoder().decode(value));
-        } catch (error) {
-            console.error('Error:', error);
-            bleStateContainer.innerHTML = "Error connecting";
-            resetDisplay();
+      try {
+        let device;
+        if (cachedDevice && cachedDevice.gatt) {
+          console.log("Attempting to reconnect to cached device:", cachedDevice.name);
+          statusDisplay.textContent = "Reconnecting to " + cachedDevice.name;
+          statusDisplay.className = "status-display connected";
+          device = cachedDevice;
+        } else {
+          // Request a new device (triggers Web Bluetooth popup)
+          console.log("Requesting Bluetooth device...");
+          device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: deviceName }],
+            optionalServices: [bleService]
+          });
+          cachedDevice = device; // Cache the device
+          statusDisplay.textContent = "Connected to " + device.name;
+          statusDisplay.className = "status-display connected";
         }
+
+        device.addEventListener('gattservicedisconnected', () => {
+          resetDisplay();
+          bleServer = null;
+          statusDisplay.textContent = "Disconnected";
+          statusDisplay.className = "status-display disconnected";
+        });
+
+        bleServer = await device.gatt.connect();
+        bleServiceFound = await bleServer.getPrimaryService(bleService);
+        sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
+        sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
+        await sensorCharacteristicFound.startNotifications();
+        const value = await sensorCharacteristicFound.readValue();
+        handleDataUpdate(new TextDecoder().decode(value));
+      } catch (error) {
+        console.error('Error:', error);
+        statusDisplay.textContent = "Error connecting to ESP32: " + error.message;
+        statusDisplay.className = "status-display disconnected";
+        resetDisplay();
+      }
     }
 
     function handleDataChange(event) {
-        const data = new TextDecoder().decode(event.target.value);
-        handleDataUpdate(data);
-        bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
-        bleStateContainer.style.color = "#24af37";
+      const data = new TextDecoder().decode(event.target.value);
+      handleDataUpdate(data);
     }
 
     function handleDataUpdate(data) {
-        const [speed, battery, odo, trip, watts, vol] = data.split(':').map(val => parseFloat(val));
-        if (isNaN(speed) || isNaN(battery) || isNaN(odo) || isNaN(trip) || isNaN(watts) || isNaN(vol)) {
-            console.error("Invalid data received:", data);
-            return;
-        }
-
-        // Update speed (split into integer and decimal parts)
-        const speedInt = Math.floor(speed);
-        const speedDec = Math.round((speed - speedInt) * 10);
-        speedContainer.innerHTML = speedInt;
-        speedDecimalContainer.innerHTML = speedDec;
-
-        // Update battery bars (0-100%, mapped to 0-5 bars)
-        const barsOn = Math.round((battery / 100) * 5);
-        batteryBars.forEach((bar, index) => {
-            bar.className = index < barsOn ? 'bar' : 'bar off';
-        });
-
-        // Update voltage
-        voltageContainer.innerHTML = vol.toFixed(1);
-
-        // Update assist
-        assistContainer.innerHTML = assistLevel;
-
-        // Update odometer
-        odometerContainer.innerHTML = odo.toFixed(0).padStart(6, '0');
-
-        // Update trip
-        tripContainer.innerHTML = trip.toFixed(1);
-
-        // Update watts
-        wattsContainer.innerHTML = watts.toFixed(0);
-
-        console.log(`Updated - Speed: ${speed} km/h, Battery: ${battery}%, Odo: ${odo} km, Trip: ${trip} km, Watts: ${watts} W, Voltage: ${vol}V`);
+      const [speed, power, trip, odo, battery] = data.split(':').map(val => parseFloat(val));
+      if (isNaN(speed) || isNaN(power) || isNaN(trip) || isNaN(odo) || isNaN(battery)) {
+        console.error("Invalid data received:", data);
+        return;
+      }
+      updateSpeed(speed);
+      updatePower(power);
+      updateDisplay(battery, trip, odo);
+      console.log(`Updated - Speed: ${speed} km/h, Power: ${power} W, Trip: ${trip} km, Odo: ${odo} km, Battery: ${battery}%`);
+      statusDisplay.textContent = "Connected to ESP32";
+      statusDisplay.className = "status-display connected";
     }
 
     function resetDisplay() {
-        speedContainer.innerHTML = "0";
-        speedDecimalContainer.innerHTML = "0";
-        voltageContainer.innerHTML = "0";
-        assistContainer.innerHTML = "1";
-        odometerContainer.innerHTML = "0";
-        tripContainer.innerHTML = "0";
-        wattsContainer.innerHTML = "0";
-        batteryBars.forEach(bar => bar.className = 'bar off');
-        assistLevel = 1;
-        lightState = false;
-        lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
-    }
-
-    function adjustAssistLevel(change) {
-        if (!bleServer || !bleServer.connected) {
-            window.alert("Not connected to BLE device!");
-            return;
-        }
-
-        assistLevel = Math.max(0, Math.min(5, assistLevel + change));
-        bleServer.getPrimaryService(bleService)
-            .then(service => service.getCharacteristic(ledCharacteristic))
-            .then(characteristic => {
-                const data = new Uint8Array([assistLevel]);
-                return characteristic.writeValue(data);
-            })
-            .then(() => {
-                assistContainer.innerHTML = assistLevel;
-                console.log("Assist level set to:", assistLevel);
-            })
-            .catch(error => console.error("Error setting assist level:", error));
-    }
-
-    function toggleLight() {
-        if (!bleServer || !bleServer.connected) {
-            window.alert("Not connected to BLE device!");
-            return;
-        }
-
-        lightState = !lightState;
-        bleServer.getPrimaryService(bleService)
-            .then(service => service.getCharacteristic(ledCharacteristic))
-            .then(characteristic => {
-                const data = new Uint8Array([lightState ? 255 : 254]);
-                return characteristic.writeValue(data);
-            })
-            .then(() => {
-                console.log("Light set to:", lightState ? "ON" : "OFF");
-                lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
-                bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
-                bleStateContainer.style.color = "#24af37";
-            })
-            .catch(error => {
-                console.error("Error toggling light:", error);
-                lightState = !lightState; // Revert state on error to keep UI in sync
-                lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
-            });
+      updateSpeed(0);
+      updatePower(0);
+      updateDisplay(0, 0, 0);
+      assistLevel = 0;
+      assistDisplay.textContent = assistLevel;
+      lightState = false;
+      lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+      statusDisplay.textContent = "Disconnected";
+      statusDisplay.className = "status-display disconnected";
     }
 
     function disconnectDevice() {
-        if (bleServer && bleServer.connected) {
-            bleStateContainer.innerHTML = "Disconnected";
-            bleStateContainer.style.color = "#d13a30";
-            resetDisplay();
-
-            if (sensorCharacteristicFound) {
-                sensorCharacteristicFound.stopNotifications()
-                    .then(() => {
-                        return bleServer.disconnect();
-                    })
-                    .then(() => {
-                        console.log("Device Disconnected");
-                        bleServer = null;
-                        sensorCharacteristicFound = null;
-                    })
-                    .catch(error => {
-                        console.error("Error disconnecting:", error);
-                        bleStateContainer.innerHTML = "Error disconnecting";
-                    });
-            } else {
-                bleServer.disconnect()
-                    .then(() => {
-                        console.log("Device Disconnected");
-                        bleServer = null;
-                    })
-                    .catch(error => {
-                        console.error("Error disconnecting:", error);
-                    });
-            }
+      if (bleServer && bleServer.connected) {
+        if (sensorCharacteristicFound) {
+          sensorCharacteristicFound.stopNotifications()
+            .then(() => bleServer.disconnect())
+            .then(() => {
+              console.log("Device Disconnected");
+              bleServer = null;
+              sensorCharacteristicFound = null;
+              resetDisplay();
+              statusDisplay.textContent = "Disconnected";
+              statusDisplay.className = "status-display disconnected";
+            })
+            .catch(error => {
+              console.error("Error disconnecting:", error);
+              statusDisplay.textContent = "Error disconnecting: " + error.message;
+              statusDisplay.className = "status-display disconnected";
+            });
         } else {
-            window.alert("Bluetooth is not connected.");
-            bleStateContainer.innerHTML = "Disconnected";
-            bleStateContainer.style.color = "#d13a30";
-            resetDisplay();
+          bleServer.disconnect()
+            .then(() => {
+              console.log("Device Disconnected");
+              bleServer = null;
+              resetDisplay();
+              statusDisplay.textContent = "Disconnected";
+              statusDisplay.className = "status-display disconnected";
+            })
+            .catch(error => {
+              console.error("Error disconnecting:", error);
+              statusDisplay.textContent = "Error disconnecting: " + error.message;
+              statusDisplay.className = "status-display disconnected";
+            });
         }
+      } else {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+        resetDisplay();
+      }
     }
-</script>
+
+    // Update clock immediately and every second
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
 </body>
 </html>
