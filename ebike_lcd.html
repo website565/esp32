@@ -10,26 +10,31 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
       margin: 0;
       font-family: "Segoe UI", sans-serif;
+      padding: 10px;
+      box-sizing: border-box;
     }
 
     .controller {
       background: #2a2a2a;
       border-radius: 15px;
-      padding: 20px;
-      width: 400px;
-      height: 260px;
+      padding: 15px;
+      width: 90vw;
+      max-width: 400px;
+      min-height: 80vh;
       display: flex;
+      flex-direction: column;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
     }
 
     .buttons {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       justify-content: space-around;
-      margin-right: 15px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
     }
 
     .button {
@@ -37,13 +42,15 @@
       color: #000;
       font-weight: bold;
       border: none;
-      padding: 10px 12px;
-      font-size: 18px;
-      margin-bottom: 8px;
+      padding: 12px;
+      font-size: 1.2rem;
+      margin: 5px;
       border-radius: 4px;
-      width: 40px;
+      width: 50px;
       text-align: center;
       cursor: pointer;
+      flex: 1;
+      max-width: 60px;
     }
 
     .button.disconnect {
@@ -65,12 +72,15 @@
       padding: 15px;
       flex: 1;
       font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
+      align-items: center;
     }
 
     .battery {
@@ -85,8 +95,8 @@
     }
 
     .bar {
-      width: 6px;
-      height: 18px;
+      width: 5px;
+      height: 15px;
       background: #0f0;
     }
 
@@ -98,37 +108,64 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 10px 0;
     }
 
-    .left-box {
-      font-size: 36px;
-      text-align: center;
+    .assist {
+      font-size: 2rem;
     }
 
     .speed {
-      font-size: 56px;
+      font-size: 3rem;
     }
 
     .speed-decimal {
-      font-size: 20px;
+      font-size: 1rem;
       vertical-align: super;
     }
 
-    .odo, .trip, .watts {
-      font-size: 16px;
-      margin-top: 5px;
+    .odo, .trip, .watts, .voltage, .status {
+      font-size: 1rem;
       color: #0ff;
     }
 
-    .km, .watt-unit {
+    .km, .watt-unit, .volt-unit {
       color: #0ff;
       margin-left: 5px;
     }
 
     .label {
-      font-size: 12px;
+      font-size: 0.8rem;
       color: #aaa;
+      width: 80px;
+    }
+
+    @media (max-width: 600px) {
+      .controller {
+        width: 95vw;
+        min-height: 85vh;
+      }
+
+      .button {
+        font-size: 1rem;
+        padding: 10px;
+        width: 45px;
+      }
+
+      .speed {
+        font-size: 2.5rem;
+      }
+
+      .assist {
+        font-size: 1.8rem;
+      }
+
+      .odo, .trip, .watts, .voltage, .status {
+        font-size: 0.9rem;
+      }
+
+      .label {
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
@@ -143,6 +180,7 @@
     </div>
     <div class="screen">
       <div class="row">
+        <div class="label">BATTERY</div>
         <div class="battery">
           <div class="battery-bars">
             <div class="bar" id="bar1"></div>
@@ -152,38 +190,32 @@
             <div class="bar" id="bar5"></div>
             <div class="bar" id="bar6"></div>
           </div>
-          <span id="voltage">0</span>
-        </div>
-        <span>VOL</span>
-      </div>
-
-      <div class="speed-section">
-        <div class="left-box">
-          <div id="assist">1</div>
-          <div class="label">ASSIST</div>
-        </div>
-        <div>
-          <div class="label" style="text-align:right;">SPEED</div>
-          <div class="speed" id="speed">0<span class="speed-decimal" id="speedDecimal">0</span></div>
-          <div style="text-align:right;">KM/H</div>
+          <span id="voltage">0</span><span class="volt-unit">V</span>
         </div>
       </div>
-
+      <div class="row">
+        <div class="label">ASSIST</div>
+        <div class="assist" id="assist">1</div>
+      </div>
+      <div class="row">
+        <div class="label">SPEED</div>
+        <div class="speed" id="speed">0<span class="speed-decimal" id="speedDecimal">0</span><span class="km">KM/H</span></div>
+      </div>
       <div class="row">
         <div class="label">ODO</div>
-        <div><span id="odometer">0</span> <span class="km">KM</span></div>
+        <div class="odo"><span id="odometer">0</span><span class="km">KM</span></div>
       </div>
       <div class="row">
         <div class="label">TRIP</div>
-        <div><span id="trip">0</span> <span class="km">KM</span></div>
+        <div class="trip"><span id="trip">0</span><span class="km">KM</span></div>
       </div>
       <div class="row">
         <div class="label">WATTS</div>
-        <div><span id="watts">0</span> <span class="watt-unit">W</span></div>
+        <div class="watts"><span id="watts">0</span><span class="watt-unit">W</span></div>
       </div>
       <div class="row">
         <div class="label">STATUS</div>
-        <div><span id="bleState">Disconnected</span></div>
+        <div class="status"><span id="bleState">Disconnected</span></div>
       </div>
     </div>
   </div>
@@ -324,6 +356,9 @@
         // Update voltage
         voltageContainer.innerHTML = vol.toFixed(1);
 
+        // Update assist
+        assistContainer.innerHTML = assistLevel;
+
         // Update odometer
         odometerContainer.innerHTML = odo.toFixed(0).padStart(6, '0');
 
@@ -378,7 +413,7 @@
         bleServer.getPrimaryService(bleService)
             .then(service => service.getCharacteristic(ledCharacteristic))
             .then(characteristic => {
-                const data = new Uint8Array([lightState ? 255 : 0]); // Use 255 for light on to distinguish from assist levels
+                const data = new Uint8Array([lightState ? 255 : 0]);
                 return characteristic.writeValue(data);
             })
             .then(() => {
