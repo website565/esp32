@@ -331,11 +331,13 @@
     let lightState = false;
     let assistLevel = 1;
     let deviceNameConnected = '';
+    let cachedDevice = null; // Cache for the selected device
 
     // Button event listeners
     connectButton.addEventListener('click', () => {
         if (bleServer && bleServer.connected) {
             console.log("Already connected");
+            bleStateContainer.innerHTML = 'Already connected to ' + deviceNameConnected;
         } else {
             connectToDevice();
         }
@@ -357,20 +359,34 @@
         return true;
     }
 
-    function connectToDevice() {
+    async function connectToDevice() {
         if (!isWebBluetoothEnabled()) return;
 
         // Reset display values on new connection
         resetDisplay();
 
-        navigator.bluetooth.requestDevice({
-            filters: [{name: deviceName}],
-            optionalServices: [bleService]
-        })
-        .then(device => {
+        try {
+            let device;
+            if (cachedDevice && cachedDevice.gatt) {
+                // Try to reconnect to the cached device
+                console.log("Attempting to reconnect to cached device:", cachedDevice.name);
+                bleStateContainer.innerHTML = 'Reconnecting to ' + cachedDevice.name;
+                device = cachedDevice;
+            } else {
+                // Request a new device (user must select ESP32)
+                // Note: Web Bluetooth requires user interaction for security, so the popup is unavoidable on first connection
+                bleStateContainer.innerHTML = 'Select ESP32 in the popup';
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{name: deviceName}],
+                    optionalServices: [bleService]
+                });
+                cachedDevice = device; // Cache the device
+            }
+
             deviceNameConnected = device.name;
             bleStateContainer.innerHTML = 'Connected to ' + deviceNameConnected;
             bleStateContainer.style.color = "#24af37";
+
             device.addEventListener('gattservicedisconnected', () => {
                 bleStateContainer.innerHTML = "Disconnected";
                 bleStateContainer.style.color = "#d13a30";
@@ -378,31 +394,21 @@
                 bleServer = null;
                 lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
             });
-            return device.gatt.connect();
-        })
-        .then(server => {
-            bleServer = server;
+
+            bleServer = await device.gatt.connect();
             lightButton.innerHTML = '<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>';
-            return server.getPrimaryService(bleService);
-        })
-        .then(service => {
-            bleServiceFound = service;
-            return service.getCharacteristic(sensorCharacteristic);
-        })
-        .then(characteristic => {
-            sensorCharacteristicFound = characteristic;
-            characteristic.addEventListener('characteristicvaluechanged', handleDataChange);
-            characteristic.startNotifications();
-            return characteristic.readValue();
-        })
-        .then(value => {
+
+            bleServiceFound = await bleServer.getPrimaryService(bleService);
+            sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
+            sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
+            await sensorCharacteristicFound.startNotifications();
+            const value = await sensorCharacteristicFound.readValue();
             handleDataUpdate(new TextDecoder().decode(value));
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
             bleStateContainer.innerHTML = "Error connecting";
             resetDisplay();
-        });
+        }
     }
 
     function handleDataChange(event) {
