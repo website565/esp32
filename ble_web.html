@@ -1,222 +1,550 @@
-<!--
-  Rui Santos
-  Complete project details at https://RandomNerdTutorials.com/esp32-web-bluetooth/
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files.
-  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
--->
-
 <!DOCTYPE html>
-<html>
+<html lang="hr">
 <head>
-    <title>ESP32 Web BLE App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="favicon.ico">
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <meta charset="UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lebo Display</title>
+  <style>
+    body {
+      background-color: #000;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 10px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .connection-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 360px;
+      justify-content: center;
+    }
+    .connection-buttons button {
+      background-color: #00ff99;
+      border: none;
+      padding: 5px 10px;
+      font-size: 1.2em;
+      border-radius: 5px;
+      cursor: pointer;
+      flex: 1;
+      max-width: 150px;
+    }
+    .connection-buttons .disconnect-btn {
+      background-color: #ff3333;
+    }
+    .connection-buttons button:hover {
+      opacity: 0.9;
+    }
+    .display {
+      width: 100%;
+      max-width: 360px;
+      height: 100%;
+      background-color: #111;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .battery-time {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      font-size: 1.2em;
+    }
+    .light-button {
+      background-color: #00ff99;
+      border: none;
+      padding: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+    }
+    .light-button svg {
+      width: 20px;
+      height: 20px;
+    }
+    .light-button:hover {
+      opacity: 0.9;
+    }
+    .circle-wrapper {
+      position: relative;
+      width: 240px;
+      height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .circle-container {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+    .power-circle {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: conic-gradient(#00ff99 0% 0%, #333 0%);
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .power-inner-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: transparent;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .gap-circle {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: #000;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 3;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .speed-circle {
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: conic-gradient(#00ff99 0% 0%, #333 0%);
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 4;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .inner-circle {
+      width: 150px;
+      height: 150px;
+      background-color: #000;
+      border-radius: 50%;
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      z-index: 5;
+      border: 1px solid white;
+      box-sizing: border-box;
+    }
+    .value-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 6;
+    }
+    .speed-value, .power-value {
+      font-size: 1.8em;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .speed-unit, .power-unit {
+      font-size: 0.8em;
+      line-height: 1;
+    }
+    .bottom-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .trip, .odo {
+      text-align: center;
+      font-size: 1.2em;
+      flex: 1;
+    }
+    .assist-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .assist-circle {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 3px solid #00ff99;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8em;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    .assist-buttons button {
+      background-color: #00ff99;
+      border: none;
+      padding: 7.5px 15px;
+      margin: 3px;
+      font-size: 1.8em;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .status-display {
+      font-size: 1em;
+      text-align: center;
+      padding-bottom: 10px;
+    }
+    .status-display.connected {
+      color: #00ff99;
+    }
+    .status-display.disconnected {
+      color: #ff3333;
+    }
+  </style>
 </head>
 <body>
-    <div class="topnav">
-        <h1>ESP32 Web BLE Application</h1>
+  <div class="connection-buttons">
+    <button id="connectButton">Connect</button>
+    <button id="disconnectButton" class="disconnect-btn">Disconnect</button>
+  </div>
+  <div class="display">
+    <div class="battery-time">
+      <div id="batteryDisplay">🔋 0%</div>
+      <button id="lightButton" class="light-button">
+        <svg viewBox="0 0 24 24" fill="#808080">
+          <path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/>
+        </svg>
+      </button>
+      <div id="clockDisplay">00:00</div>
     </div>
-    <div class="content">
-        <div class="card-grid">
-            <div class="card">
-                <p>
-                    <button id="connectBleButton" class="connectButton"> Connect to BLE Device</button>
-                    <button id="disconnectBleButton" class="disconnectButton"> Disconnect BLE Device</button>
-                </p>
-                <p class="gray-label">BLE state: <strong><span id="bleState" style="color:#d13a30;">Disconnected</span></strong></p>
-            </div>
+    <div class="circle-wrapper">
+      <div class="circle-container">
+        <div class="power-circle" id="powerCircle"></div>
+        <div class="power-inner-circle"></div>
+        <div class="gap-circle"></div>
+        <div class="speed-circle" id="speedCircle"></div>
+        <div class="inner-circle"></div>
+        <div class="value-container">
+          <div class="speed-value" id="speedDisplay">0.0</div>
+          <div class="speed-unit">km/h</div>
+          <div class="power-value" id="powerDisplay">0</div>
+          <div class="power-unit">W</div>
         </div>
-        <div class="card-grid">
-            <div class="card">
-                <h2>Fetched Value</h2>
-                <p class="reading"><span id="valueContainer">NaN</span></p>
-                <p class="gray-label">Last reading: <span id="timestamp"></span></p>
-            </div>
-
-            <div class="card">
-                <h2>Control GPIO 2</h2>
-                <button id="onButton" class="onButton">ON</button>
-                <button id="offButton" class="offButton">OFF</button>
-                <p class="gray-label">Last value sent: <span id="valueSent"></span></p>
-            </div>
+      </div>
+    </div>
+    <div class="bottom-info">
+      <div class="trip">
+        <div id="tripDisplay">0.0 km</div>
+        <div>TRIP</div>
+      </div>
+      <div class="assist-section">
+        <div class="assist-buttons">
+          <button id="assistPlusButton">+</button>
         </div>
+        <div class="assist-circle" id="assistDisplay">0</div>
+        <div class="assist-buttons">
+          <button id="assistMinusButton">−</button>
+        </div>
+      </div>
+      <div class="odo">
+        <div id="odoDisplay">0 km</div>
+        <div>ODO</div>
+      </div>
     </div>
-    <div class="footer">
-        <p><a href="https://randomnerdtutorials.com/">Created by RandomNerdTutorials.com</a></p>
-        <p><a href="https://RandomNerdTutorials.com/esp32-web-bluetooth/">Read the full project here.</a></p>
-    </div>
-</body>
-<script>
+    <div id="statusDisplay" class="status-display disconnected">Disconnected</div>
+  </div>
+  <script>
     // DOM Elements
-    const connectButton = document.getElementById('connectBleButton');
-    const disconnectButton = document.getElementById('disconnectBleButton');
-    const onButton = document.getElementById('onButton');
-    const offButton = document.getElementById('offButton');
-    const retrievedValue = document.getElementById('valueContainer');
-    const latestValueSent = document.getElementById('valueSent');
-    const bleStateContainer = document.getElementById('bleState');
-    const timestampContainer = document.getElementById('timestamp');
+    const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const assistPlusButton = document.getElementById('assistPlusButton');
+    const assistMinusButton = document.getElementById('assistMinusButton');
+    const lightButton = document.getElementById('lightButton');
+    const assistDisplay = document.getElementById("assistDisplay");
+    const speedDisplay = document.getElementById("speedDisplay");
+    const speedCircle = document.getElementById("speedCircle");
+    const powerDisplay = document.getElementById("powerDisplay");
+    const powerCircle = document.getElementById("powerCircle");
+    const clockDisplay = document.getElementById("clockDisplay");
+    const batteryDisplay = document.getElementById("batteryDisplay");
+    const tripDisplay = document.getElementById("tripDisplay");
+    const odoDisplay = document.getElementById("odoDisplay");
+    const statusDisplay = document.getElementById("statusDisplay");
 
-    //Define BLE Device Specs
-    var deviceName ='ESP32';
-    var bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
-    var ledCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
-    var sensorCharacteristic= '19b10001-e8f2-537e-4f6c-d104768a1214';
+    // BLE Device Specs
+    const deviceName = 'ESP32';
+    const bleService = '19b10000-e8f2-537e-4f6c-d104768a1214';
+    const sensorCharacteristic = '19b10001-e8f2-537e-4f6c-d104768a1214';
+    const ledCharacteristic = '19b10002-e8f2-537e-4f6c-d104768a1214';
 
-    //Global Variables to Handle Bluetooth
-    var bleServer;
-    var bleServiceFound;
-    var sensorCharacteristicFound;
+    // Global Variables
+    let bleServer;
+    let bleServiceFound;
+    let sensorCharacteristicFound;
+    let assistLevel = 0;
+    let lightState = false;
+    let cachedDevice = null;
 
-    // Connect Button (search for BLE Devices only if BLE is available)
-    connectButton.addEventListener('click', (event) => {
-        if (isWebBluetoothEnabled()){
+    // Button Event Listeners
+    connectButton.addEventListener('click', () => {
+        if (bleServer && bleServer.connected) {
+            console.log("Already connected");
+            statusDisplay.textContent = "Connected to ESP32";
+            statusDisplay.className = "status-display connected";
+        } else {
             connectToDevice();
         }
     });
 
-    // Disconnect Button
     disconnectButton.addEventListener('click', disconnectDevice);
+    assistPlusButton.addEventListener('click', () => changeAssist(1));
+    assistMinusButton.addEventListener('click', () => changeAssist(-1));
+    lightButton.addEventListener('click', toggleLight);
 
-    // Write to the ESP32 LED Characteristic
-    onButton.addEventListener('click', () => writeOnCharacteristic(1));
-    offButton.addEventListener('click', () => writeOnCharacteristic(0));
-
-    // Check if BLE is available in your Browser
-    function isWebBluetoothEnabled() {
-        if (!navigator.bluetooth) {
-            console.log('Web Bluetooth API is not available in this browser!');
-            bleStateContainer.innerHTML = "Web Bluetooth API is not available in this browser/device!";
-            return false
-        }
-        console.log('Web Bluetooth API supported in this browser.');
-        return true
+    // Clock Update
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      clockDisplay.textContent = `${hours}:${minutes}`;
     }
 
-    // Connect to BLE Device and Enable Notifications
-    function connectToDevice(){
-        console.log('Initializing Bluetooth...');
-        navigator.bluetooth.requestDevice({
-            filters: [{name: deviceName}],
-            optionalServices: [bleService]
-        })
-        .then(device => {
-            console.log('Device Selected:', device.name);
-            bleStateContainer.innerHTML = 'Connected to device ' + device.name;
-            bleStateContainer.style.color = "#24af37";
-            device.addEventListener('gattservicedisconnected', onDisconnected);
-            return device.gatt.connect();
-        })
-        .then(gattServer =>{
-            bleServer = gattServer;
-            console.log("Connected to GATT Server");
-            return bleServer.getPrimaryService(bleService);
-        })
-        .then(service => {
-            bleServiceFound = service;
-            console.log("Service discovered:", service.uuid);
-            return service.getCharacteristic(sensorCharacteristic);
-        })
+    // Assist Level Update
+    function changeAssist(delta) {
+      assistLevel += delta;
+      if (assistLevel < 0) assistLevel = 0;
+      if (assistLevel > 9) assistLevel = 9;
+      assistDisplay.textContent = assistLevel;
+
+      if (bleServer && bleServer.connected) {
+        bleServer.getPrimaryService(bleService)
+          .then(service => service.getCharacteristic(ledCharacteristic))
+          .then(characteristic => {
+            const data = new Uint8Array([assistLevel]);
+            return characteristic.writeValue(data);
+          })
+          .then(() => console.log("Assist level set to:", assistLevel))
+          .catch(error => {
+            console.error("Error setting assist level:", error);
+            statusDisplay.textContent = "Error setting assist level";
+            statusDisplay.className = "status-display disconnected";
+          });
+      } else {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+      }
+    }
+
+    // Light Toggle
+    function toggleLight() {
+      if (!bleServer || !bleServer.connected) {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+        return;
+      }
+
+      lightState = !lightState;
+      bleServer.getPrimaryService(bleService)
+        .then(service => service.getCharacteristic(ledCharacteristic))
         .then(characteristic => {
-            console.log("Characteristic discovered:", characteristic.uuid);
-            sensorCharacteristicFound = characteristic;
-            characteristic.addEventListener('characteristicvaluechanged', handleCharacteristicChange);
-            characteristic.startNotifications();
-            console.log("Notifications Started.");
-            return characteristic.readValue();
+          const data = new Uint8Array([lightState ? 255 : 254]);
+          return characteristic.writeValue(data);
         })
-        .then(value => {
-            console.log("Read value: ", value);
-            const decodedValue = new TextDecoder().decode(value);
-            console.log("Decoded value: ", decodedValue);
-            retrievedValue.innerHTML = decodedValue;
+        .then(() => {
+          console.log("Light set to:", lightState ? "ON" : "OFF");
+          lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+          statusDisplay.textContent = "Connected to ESP32";
+          statusDisplay.className = "status-display connected";
         })
         .catch(error => {
-            console.log('Error: ', error);
-        })
+          console.error("Error toggling light:", error);
+          lightState = !lightState; // Revert state on error
+          lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="${lightState ? '#FFD700' : '#808080'}"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+          statusDisplay.textContent = "Error toggling light";
+          statusDisplay.className = "status-display disconnected";
+        });
     }
 
-    function onDisconnected(event){
-        console.log('Device Disconnected:', event.target.device.name);
-        bleStateContainer.innerHTML = "Device disconnected";
-        bleStateContainer.style.color = "#d13a30";
-
-        connectToDevice();
+    // Speed Update
+    function updateSpeed(speed) {
+      speedDisplay.textContent = speed.toFixed(1);
+      const speedPercent = Math.min((speed / 100) * 100, 100);
+      speedCircle.style.background = `conic-gradient(#00ff99 0% ${speedPercent}%, #333 ${speedPercent}% 100%)`;
     }
 
-    function handleCharacteristicChange(event){
-        const newValueReceived = new TextDecoder().decode(event.target.value);
-        console.log("Characteristic value changed: ", newValueReceived);
-        retrievedValue.innerHTML = newValueReceived;
-        timestampContainer.innerHTML = getDateTime();
+    // Power Update
+    function updatePower(power) {
+      powerDisplay.textContent = Math.round(power);
+      const powerPercent = Math.min((power / 1000) * 100, 100);
+      let color = '#00ff99'; // Green for low power
+      if (power > 700) color = 'red';
+      else if (power > 300) color = 'orange';
+      powerCircle.style.background = `conic-gradient(${color} 0% ${powerPercent}%, #333 ${powerPercent}% 100%)`;
+      powerDisplay.style.color = color;
     }
 
-    function writeOnCharacteristic(value){
-        if (bleServer && bleServer.connected) {
-            bleServiceFound.getCharacteristic(ledCharacteristic)
-            .then(characteristic => {
-                console.log("Found the LED characteristic: ", characteristic.uuid);
-                const data = new Uint8Array([value]);
-                return characteristic.writeValue(data);
-            })
-            .then(() => {
-                latestValueSent.innerHTML = value;
-                console.log("Value written to LEDcharacteristic:", value);
-            })
-            .catch(error => {
-                console.error("Error writing to the LED characteristic: ", error);
-            });
+    // Battery, Trip, and Odo Update
+    function updateDisplay(battery, trip, odo) {
+      batteryDisplay.textContent = `🔋 ${Math.round(battery)}%`;
+      tripDisplay.textContent = `${trip.toFixed(1)} km`;
+      odoDisplay.textContent = `${Math.round(odo)} km`;
+    }
+
+    // BLE Functions
+    function isWebBluetoothEnabled() {
+      if (!navigator.bluetooth) {
+        statusDisplay.textContent = "Web Bluetooth is not supported in this browser. Use Chrome, Edge, or Opera with HTTPS or file://";
+        statusDisplay.className = "status-display disconnected";
+        return false;
+      }
+      return true;
+    }
+
+    async function connectToDevice() {
+      if (!isWebBluetoothEnabled()) return;
+
+      // Reset display values
+      resetDisplay();
+
+      try {
+        let device;
+        if (cachedDevice && cachedDevice.gatt) {
+          console.log("Attempting to reconnect to cached device:", cachedDevice.name);
+          statusDisplay.textContent = "Reconnecting to " + cachedDevice.name;
+          statusDisplay.className = "status-display connected";
+          device = cachedDevice;
         } else {
-            console.error ("Bluetooth is not connected. Cannot write to characteristic.")
-            window.alert("Bluetooth is not connected. Cannot write to characteristic. \n Connect to BLE first!")
+          // Request a new device (triggers Web Bluetooth popup)
+          console.log("Requesting Bluetooth device...");
+          device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: deviceName }],
+            optionalServices: [bleService]
+          });
+          cachedDevice = device; // Cache the device
+          statusDisplay.textContent = "Connected to " + device.name;
+          statusDisplay.className = "status-display connected";
         }
+
+        device.addEventListener('gattservicedisconnected', () => {
+          resetDisplay();
+          bleServer = null;
+          statusDisplay.textContent = "Disconnected";
+          statusDisplay.className = "status-display disconnected";
+        });
+
+        bleServer = await device.gatt.connect();
+        bleServiceFound = await bleServer.getPrimaryService(bleService);
+        sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
+        sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
+        await sensorCharacteristicFound.startNotifications();
+        const value = await sensorCharacteristicFound.readValue();
+        handleDataUpdate(new TextDecoder().decode(value));
+      } catch (error) {
+        console.error('Error:', error);
+        statusDisplay.textContent = "Error connecting to ESP32: " + error.message;
+        statusDisplay.className = "status-display disconnected";
+        resetDisplay();
+      }
+    }
+
+    function handleDataChange(event) {
+      const data = new TextDecoder().decode(event.target.value);
+      handleDataUpdate(data);
+    }
+
+    function handleDataUpdate(data) {
+      const [speed, power, trip, odo, battery] = data.split(':').map(val => parseFloat(val));
+      if (isNaN(speed) || isNaN(power) || isNaN(trip) || isNaN(odo) || isNaN(battery)) {
+        console.error("Invalid data received:", data);
+        return;
+      }
+      updateSpeed(speed);
+      updatePower(power);
+      updateDisplay(battery, trip, odo);
+      console.log(`Updated - Speed: ${speed} km/h, Power: ${power} W, Trip: ${trip} km, Odo: ${odo} km, Battery: ${battery}%`);
+      statusDisplay.textContent = "Connected to ESP32";
+      statusDisplay.className = "status-display connected";
+    }
+
+    function resetDisplay() {
+      updateSpeed(0);
+      updatePower(0);
+      updateDisplay(0, 0, 0);
+      assistLevel = 0;
+      assistDisplay.textContent = assistLevel;
+      lightState = false;
+      lightButton.innerHTML = `<svg viewBox="0 0 24 24" fill="#808080"><path d="M12 2c-3.87 0-7 3.13-7 7 0 2.54 1.34 4.76 3.36 5.97.47.28.81.75.81 1.28v1.25c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1.25c0-.53.34-1 .81-1.28C17.66 13.76 19 11.54 19 9c0-3.87-3.13-7-7-7zm0 18c-.55 0-1 .45-1 1h2c0-.55-.45-1-1-1zm1-14h-2v1h2V6zm0 2h-2v1h2V8zm0 2h-2v1h2v-1zm-5.5 1h1v1h-1v-1zm10 0h-1v1h1v-1z"/></svg>`;
+      statusDisplay.textContent = "Disconnected";
+      statusDisplay.className = "status-display disconnected";
     }
 
     function disconnectDevice() {
-        console.log("Disconnect Device.");
-        if (bleServer && bleServer.connected) {
-            if (sensorCharacteristicFound) {
-                sensorCharacteristicFound.stopNotifications()
-                    .then(() => {
-                        console.log("Notifications Stopped");
-                        return bleServer.disconnect();
-                    })
-                    .then(() => {
-                        console.log("Device Disconnected");
-                        bleStateContainer.innerHTML = "Device Disconnected";
-                        bleStateContainer.style.color = "#d13a30";
-
-                    })
-                    .catch(error => {
-                        console.log("An error occurred:", error);
-                    });
-            } else {
-                console.log("No characteristic found to disconnect.");
-            }
+      if (bleServer && bleServer.connected) {
+        if (sensorCharacteristicFound) {
+          sensorCharacteristicFound.stopNotifications()
+            .then(() => bleServer.disconnect())
+            .then(() => {
+              console.log("Device Disconnected");
+              bleServer = null;
+              sensorCharacteristicFound = null;
+              resetDisplay();
+              statusDisplay.textContent = "Disconnected";
+              statusDisplay.className = "status-display disconnected";
+            })
+            .catch(error => {
+              console.error("Error disconnecting:", error);
+              statusDisplay.textContent = "Error disconnecting: " + error.message;
+              statusDisplay.className = "status-display disconnected";
+            });
         } else {
-            // Throw an error if Bluetooth is not connected
-            console.error("Bluetooth is not connected.");
-            window.alert("Bluetooth is not connected.")
+          bleServer.disconnect()
+            .then(() => {
+              console.log("Device Disconnected");
+              bleServer = null;
+              resetDisplay();
+              statusDisplay.textContent = "Disconnected";
+              statusDisplay.className = "status-display disconnected";
+            })
+            .catch(error => {
+              console.error("Error disconnecting:", error);
+              statusDisplay.textContent = "Error disconnecting: " + error.message;
+              statusDisplay.className = "status-display disconnected";
+            });
         }
+      } else {
+        statusDisplay.textContent = "Not connected to ESP32";
+        statusDisplay.className = "status-display disconnected";
+        resetDisplay();
+      }
     }
 
-    function getDateTime() {
-        var currentdate = new Date();
-        var day = ("00" + currentdate.getDate()).slice(-2); // Convert day to string and slice
-        var month = ("00" + (currentdate.getMonth() + 1)).slice(-2);
-        var year = currentdate.getFullYear();
-        var hours = ("00" + currentdate.getHours()).slice(-2);
-        var minutes = ("00" + currentdate.getMinutes()).slice(-2);
-        var seconds = ("00" + currentdate.getSeconds()).slice(-2);
-
-        var datetime = day + "/" + month + "/" + year + " at " + hours + ":" + minutes + ":" + seconds;
-        return datetime;
-    }
-
-
-</script>
-
+    // Update clock immediately and every second
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
 </html>
