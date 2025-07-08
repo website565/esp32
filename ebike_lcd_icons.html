@@ -213,7 +213,7 @@
         <img src="images/bluetooth_off.png" alt="Bluetooth Off">
       </button>
       <button id="lightButton" class="light-button">
-        <img src="images/light_off.png" alt="Light Off">
+        <img src="images/grok_image_t6uncz.png" alt="Light Off">
       </button>
       <div id="clockDisplay">00:00</div>
     </div>
@@ -348,13 +348,13 @@
         })
         .then(() => {
           console.log("Light set to:", lightState ? "ON" : "OFF");
-          lightButton.innerHTML = `<img src="images/${lightState ? 'light_on.png' : 'light_off.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
+          lightButton.innerHTML = `<img src="images/${lightState ? 'grok_image_dcywdf.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
           updateBluetoothButton();
         })
         .catch(error => {
           console.error("Error toggling light:", error);
           lightState = !lightState;
-          lightButton.innerHTML = `<img src="images/${lightState ? 'light_on.png' : 'light_off.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
+          lightButton.innerHTML = `<img src="light/${lightState ? 'grok_image_dcywdf.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
           updateBluetoothButton();
         });
     }
@@ -472,7 +472,7 @@
       assistLevel = 0;
       assistDisplay.textContent = assistLevel;
       lightState = false;
-      lightButton.innerHTML = `<img src="images/light_off.png" alt="Light Off">`;
+      lightButton.innerHTML = `<img src="images/grok_image_t6uncz.png" alt="Light Off">`;
       isConnected = false;
       updateBluetoothButton();
     }
