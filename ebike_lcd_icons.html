@@ -348,13 +348,13 @@
         })
         .then(() => {
           console.log("Light set to:", lightState ? "ON" : "OFF");
-          lightButton.innerHTML = `<img src="images/${lightState ? 'grok_image_dcywdf.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
+          lightButton.innerHTML = `<img src="images/${lightState ? 'on.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
           updateBluetoothButton();
         })
         .catch(error => {
           console.error("Error toggling light:", error);
           lightState = !lightState;
-          lightButton.innerHTML = `<img src="light/${lightState ? 'grok_image_dcywdf.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
+          lightButton.innerHTML = `<img src="light/${lightState ? 'on.png' : 'grok_image_t6uncz.png'}" alt="Light ${lightState ? 'On' : 'Off'}">`;
           updateBluetoothButton();
         });
     }
