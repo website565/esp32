@@ -5,83 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Land Area Calculator</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        h1 {
-            font-size: 24px;
-            color: #333;
-        }
-        #map {
-            width: 100%;
-            max-width: 600px;
-            height: 400px;
-            background-color: #e0e0e0;
-            margin-bottom: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #pointsList {
-            width: 100%;
-            max-width: 600px;
-            margin-top: 20px;
-        }
-        .point {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            background-color: white;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .point button {
-            background-color: #ff4444;
-        }
-        #result {
-            font-size: 18px;
-            margin-top: 20px;
-            color: #333;
-        }
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            h1 {
-                font-size: 20px;
-            }
-            button {
-                font-size: 14px;
-                padding: 8px 16px;
-            }
-            #map {
-                height: 300px;
-            }
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; flex-direction: column; align-items: center; }
+        h1 { font-size: 24px; color: #333; }
+        #map { width: 100%; max-width: 600px; height: 400px; background-color: #e0e0e0; margin-bottom: 20px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 5px; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #pointsList { width: 100%; max-width: 600px; margin-top: 20px; }
+        .point { display: flex; justify-content: space-between; padding: 10px; background-color: white; margin-bottom: 5px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .point button { background-color: #ff4444; }
+        #result { font-size: 18px; margin-top: 20px; color: #333; }
+        input { margin: 5px; padding: 8px; width: 120px; }
+        @media (max-width: 600px) { body { padding: 10px; } h1 { font-size: 20px; } button { font-size: 14px; padding: 8px 16px; } #map { height: 300px; } }
     </style>
 </head>
 <body>
     <h1>Land Area Calculator</h1>
-    <div id="map">Map placeholder (Google Maps can be integrated here)</div>
+    <div id="map">Map placeholder</div>
     <button id="addPointBtn" onclick="getGPSPoint()">Add GPS Point</button>
+    <div>
+        <input id="latInput" type="number" step="any" placeholder="Latitude">
+        <input id="lngInput" type="number" step="any" placeholder="Longitude">
+        <button onclick="addManualPoint()">Add Manual Point</button>
+    </div>
     <button id="calculateBtn" onclick="calculateArea()" disabled>Calculate Area</button>
     <div id="pointsList"></div>
     <div id="result"></div>
@@ -89,7 +34,6 @@
     <script>
         let points = [];
 
-        // Get GPS coordinates with high accuracy
         function getGPSPoint() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -105,7 +49,6 @@
                         points.push(point);
                         updatePointsList();
                         updateCalculateButton();
-                        // Optional: Add marker to map (requires Google Maps API)
                     },
                     error => {
                         alert("Error getting GPS: " + error.message);
@@ -121,7 +64,20 @@
             }
         }
 
-        // Update the list of points
+        function addManualPoint() {
+            const lat = parseFloat(document.getElementById('latInput').value);
+            const lng = parseFloat(document.getElementById('lngInput').value);
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("Please enter valid latitude and longitude.");
+                return;
+            }
+            points.push({ lat, lng });
+            document.getElementById('latInput').value = '';
+            document.getElementById('lngInput').value = '';
+            updatePointsList();
+            updateCalculateButton();
+        }
+
         function updatePointsList() {
             const pointsList = document.getElementById('pointsList');
             pointsList.innerHTML = '';
@@ -134,7 +90,6 @@
             });
         }
 
-        // Delete a point
         function deletePoint(index) {
             points.splice(index, 1);
             updatePointsList();
@@ -142,20 +97,24 @@
             document.getElementById('result').innerHTML = '';
         }
 
-        // Enable/disable calculate button based on number of points
         function updateCalculateButton() {
             const calculateBtn = document.getElementById('calculateBtn');
             calculateBtn.disabled = points.length < 3;
         }
 
-        // Calculate area using the Shoelace formula
         function calculateArea() {
             if (points.length < 3) {
                 alert("At least 3 points are required to calculate an area.");
                 return;
             }
 
-            // Convert lat/lng to meters (approximation for small areas)
+            // Check for identical or collinear points
+            const uniquePoints = new Set(points.map(p => `${p.lat},${p.lng}`));
+            if (uniquePoints.size < 3) {
+                alert("Points are too close or identical. Please add distinct points.");
+                return;
+            }
+
             const R = 6371000; // Earth's radius in meters
             let area = 0;
             const n = points.length;
