@@ -1,107 +1,176 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS Area Calculator</title>
+    <title>Land Area Calculator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 24px;
+            color: #333;
+        }
+        #map {
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+            background-color: #e0e0e0;
+            margin-bottom: 20px;
         }
         button {
             padding: 10px 20px;
-            margin: 10px;
+            margin: 5px;
             font-size: 16px;
             cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
         }
         #pointsList {
-            margin: 20px 0;
-            text-align: left;
-            display: inline-block;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+        .point {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: white;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .point button {
+            background-color: #ff4444;
         }
         #result {
+            font-size: 18px;
             margin-top: 20px;
-            font-weight: bold;
+            color: #333;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+            #map {
+                height: 300px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>GPS Area Calculator</h1>
-    <button onclick="capturePoint()">Capture Point</button>
-    <button onclick="removeLastPoint()">Remove Last Point</button>
-    <button onclick="calculateArea()">Calculate Area</button>
+    <h1>Land Area Calculator</h1>
+    <div id="map">Map placeholder (Google Maps can be integrated here)</div>
+    <button id="addPointBtn" onclick="getGPSPoint()">Add GPS Point</button>
+    <button id="calculateBtn" onclick="calculateArea()" disabled>Calculate Area</button>
     <div id="pointsList"></div>
     <div id="result"></div>
 
     <script>
         let points = [];
 
-        function capturePoint() {
+        // Get GPS coordinates with high accuracy
+        function getGPSPoint() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     position => {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        points.push({ lat, lon });
+                        if (position.coords.accuracy > 20) {
+                            alert("GPS accuracy is low. Please try again.");
+                            return;
+                        }
+                        const point = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        points.push(point);
                         updatePointsList();
+                        updateCalculateButton();
+                        // Optional: Add marker to map (requires Google Maps API)
                     },
                     error => {
-                        alert('Error getting GPS location: ' + error.message);
+                        alert("Error getting GPS: " + error.message);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
             } else {
-                alert('Geolocation is not supported by this browser.');
+                alert("Geolocation is not supported by this browser.");
             }
         }
 
-        function removeLastPoint() {
-            if (points.length > 0) {
-                points.pop();
-                updatePointsList();
-            } else {
-                alert('No points to remove.');
-            }
-        }
-
+        // Update the list of points
         function updatePointsList() {
             const pointsList = document.getElementById('pointsList');
-            pointsList.innerHTML = '<h3>Captured Points:</h3>';
-            if (points.length === 0) {
-                pointsList.innerHTML += 'No points captured yet.';
-            } else {
-                points.forEach((point, index) => {
-                    pointsList.innerHTML += `Point ${index + 1}: Lat ${point.lat.toFixed(6)}, Lon ${point.lon.toFixed(6)}<br>`;
-                });
-            }
+            pointsList.innerHTML = '';
+            points.forEach((point, index) => {
+                const pointDiv = document.createElement('div');
+                pointDiv.className = 'point';
+                pointDiv.innerHTML = `Point ${index + 1}: Lat ${point.lat.toFixed(6)}, Lng ${point.lng.toFixed(6)}
+                    <button onclick="deletePoint(${index})">Delete</button>`;
+                pointsList.appendChild(pointDiv);
+            });
         }
 
+        // Delete a point
+        function deletePoint(index) {
+            points.splice(index, 1);
+            updatePointsList();
+            updateCalculateButton();
+            document.getElementById('result').innerHTML = '';
+        }
+
+        // Enable/disable calculate button based on number of points
+        function updateCalculateButton() {
+            const calculateBtn = document.getElementById('calculateBtn');
+            calculateBtn.disabled = points.length < 3;
+        }
+
+        // Calculate area using the Shoelace formula
         function calculateArea() {
             if (points.length < 3) {
-                alert('At least 3 points are required to calculate an area.');
+                alert("At least 3 points are required to calculate an area.");
                 return;
             }
 
-            // Convert GPS coordinates to approximate meters using a simple flat projection
-            const referenceLat = points[0].lat;
-            const pointsInMeters = points.map(point => {
-                const latDiff = (point.lat - referenceLat) * 111320; // Approx meters per degree latitude
-                const lonDiff = (point.lon - points[0].lon) * 111320 * Math.cos(referenceLat * Math.PI / 180); // Approx meters per degree longitude
-                return { x: lonDiff, y: latDiff };
-            });
-
-            // Shoelace formula to calculate area
+            // Convert lat/lng to meters (approximation for small areas)
+            const R = 6371000; // Earth's radius in meters
             let area = 0;
-            for (let i = 0; i < pointsInMeters.length; i++) {
-                const j = (i + 1) % pointsInMeters.length;
-                area += pointsInMeters[i].x * pointsInMeters[j].y;
-                area -= pointsInMeters[j].x * pointsInMeters[i].y;
-            }
-            area = Math.abs(area) / 2;
+            const n = points.length;
 
-            document.getElementById('result').innerHTML = `Calculated Area: ${area.toFixed(2)} square meters`;
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                const lat1 = points[i].lat * Math.PI / 180;
+                const lat2 = points[j].lat * Math.PI / 180;
+                const dLng = (points[j].lng - points[i].lng) * Math.PI / 180;
+                area += (points[i].lng * Math.PI / 180) * Math.sin(lat2) -
+                        (points[j].lng * Math.PI / 180) * Math.sin(lat1);
+            }
+
+            area = Math.abs(area) * 0.5 * R * R * Math.cos(points[0].lat * Math.PI / 180);
+            document.getElementById('result').innerHTML = `Area: ${area.toFixed(2)} square meters`;
         }
     </script>
 </body>
