@@ -3,24 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Land Area Calculator</title>
+    <title>Land Area Calculator with Map</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; display: flex; flex-direction: column; align-items: center; }
-        h1 { font-size: 24px; color: #333; }
-        #map { width: 100%; max-width: 600px; height: 400px; background-color: #e0e0e0; margin-bottom: 20px; }
-        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 5px; }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
-        #pointsList { width: 100%; max-width: 600px; margin-top: 20px; }
-        .point { display: flex; justify-content: space-between; padding: 10px; background-color: white; margin-bottom: 5px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .point button { background-color: #ff4444; }
-        #result { font-size: 18px; margin-top: 20px; color: #333; }
-        input { margin: 5px; padding: 8px; width: 120px; }
-        @media (max-width: 600px) { body { padding: 10px; } h1 { font-size: 20px; } button { font-size: 14px; padding: 8px 16px; } #map { height: 300px; } }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 24px;
+            color: #333;
+        }
+        #map {
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #pointsList {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+        .point {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: white;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .point button {
+            background-color: #ff4444;
+        }
+        #result {
+            font-size: 18px;
+            margin-top: 20px;
+            color: #333;
+        }
+        input {
+            margin: 5px;
+            padding: 8px;
+            width: 120px;
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            h1 { font-size: 20px; }
+            button { font-size: 14px; padding: 8px 16px; }
+            #map { height: 300px; }
+        }
     </style>
 </head>
 <body>
-    <h1>Land Area Calculator</h1>
-    <div id="map">Map placeholder</div>
+    <h1>Land Area Calculator with Map</h1>
+    <div id="map"></div>
     <button id="addPointBtn" onclick="getGPSPoint()">Add GPS Point</button>
     <div>
         <input id="latInput" type="number" step="any" placeholder="Latitude">
@@ -33,7 +89,18 @@
 
     <script>
         let points = [];
+        let map, polygon;
+        let markers = [];
 
+        // Initialize Google Maps
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 58.404472, lng: 15.584845 }, // Default center (your first point)
+                zoom: 18
+            });
+        }
+
+        // Get GPS coordinates
         function getGPSPoint() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -47,6 +114,7 @@
                             lng: position.coords.longitude
                         };
                         points.push(point);
+                        updateMap();
                         updatePointsList();
                         updateCalculateButton();
                     },
@@ -64,6 +132,7 @@
             }
         }
 
+        // Add manual point
         function addManualPoint() {
             const lat = parseFloat(document.getElementById('latInput').value);
             const lng = parseFloat(document.getElementById('lngInput').value);
@@ -74,10 +143,49 @@
             points.push({ lat, lng });
             document.getElementById('latInput').value = '';
             document.getElementById('lngInput').value = '';
+            updateMap();
             updatePointsList();
             updateCalculateButton();
         }
 
+        // Update map with markers and polygon
+        function updateMap() {
+            // Clear existing markers
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
+
+            // Add new markers
+            points.forEach(point => {
+                const marker = new google.maps.Marker({
+                    position: point,
+                    map: map
+                });
+                markers.push(marker);
+            });
+
+            // Update polygon
+            if (polygon) {
+                polygon.setMap(null);
+            }
+            if (points.length >= 3) {
+                polygon = new google.maps.Polygon({
+                    paths: points,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.35
+                });
+                polygon.setMap(map);
+            }
+
+            // Center map on the first point or average of points
+            if (points.length > 0) {
+                map.setCenter(points[0]);
+            }
+        }
+
+        // Update points list
         function updatePointsList() {
             const pointsList = document.getElementById('pointsList');
             pointsList.innerHTML = '';
@@ -90,18 +198,22 @@
             });
         }
 
+        // Delete a point
         function deletePoint(index) {
             points.splice(index, 1);
+            updateMap();
             updatePointsList();
             updateCalculateButton();
             document.getElementById('result').innerHTML = '';
         }
 
+        // Enable/disable calculate button
         function updateCalculateButton() {
             const calculateBtn = document.getElementById('calculateBtn');
             calculateBtn.disabled = points.length < 3;
         }
 
+        // Calculate area using Shoelace formula
         function calculateArea() {
             if (points.length < 3) {
                 alert("At least 3 points are required to calculate an area.");
@@ -131,6 +243,10 @@
             area = Math.abs(area) * 0.5 * R * R * Math.cos(points[0].lat * Math.PI / 180);
             document.getElementById('result').innerHTML = `Area: ${area.toFixed(2)} square meters`;
         }
+    </script>
+    <!-- Load Google Maps API (replace YOUR_API_KEY with your actual API key) -->
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
     </script>
 </body>
 </html>
