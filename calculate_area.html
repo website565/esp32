@@ -64,7 +64,7 @@
         input {
             margin: 5px;
             padding: 8px;
-            width: 160px;
+            width: 200px;
         }
         @media (max-width: 600px) {
             body { padding: 10px; }
@@ -77,22 +77,22 @@
 <body>
     <h1>Land Area Calculator with Map</h1>
     <div id="map"></div>
-    <button id="addPointBtn" onclick="getGPSPoint()">Add GPS Point</button>
 
-    <!-- Manual point input -->
+    <button onclick="getGPSPoint()">Add GPS Point</button>
+
     <div>
         <input id="latInput" type="number" step="any" placeholder="Latitude">
         <input id="lngInput" type="number" step="any" placeholder="Longitude">
         <button onclick="addManualPoint()">Add Manual Point</button>
     </div>
 
-    <!-- Combined coordinates input -->
     <div>
-        <input id="combinedInput" type="text" placeholder="58,4044691, 15,5850459">
+        <input id="combinedInput" type="text" placeholder="Enter combined coordinates">
         <button onclick="parseAndAddCombined()">Add Combined</button>
     </div>
 
     <button id="calculateBtn" onclick="calculateArea()" disabled>Calculate Area</button>
+
     <div id="pointsList"></div>
     <div id="result"></div>
 
@@ -101,7 +101,6 @@
         let map, polygon;
         let markers = [];
 
-        // Initialize Google Maps
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: 58.404472, lng: 15.584845 },
@@ -109,7 +108,6 @@
             });
         }
 
-        // Get GPS coordinates
         function getGPSPoint() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -141,7 +139,6 @@
             }
         }
 
-        // Add manual point
         function addManualPoint() {
             const lat = parseFloat(document.getElementById('latInput').value);
             const lng = parseFloat(document.getElementById('lngInput').value);
@@ -157,18 +154,26 @@
             updateCalculateButton();
         }
 
-        // Add combined coordinate string like "58,4044691, 15,5850459"
         function parseAndAddCombined() {
             const input = document.getElementById('combinedInput').value.trim();
             const parts = input.split(',');
-            if (parts.length !== 2) {
+
+            let lat, lng;
+
+            if (parts.length === 4) {
+                // Format: 58,4044691, 15,5850459 (European style)
+                const latStr = parts[0].trim() + '.' + parts[1].trim();
+                const lngStr = parts[2].trim() + '.' + parts[3].trim();
+                lat = parseFloat(latStr);
+                lng = parseFloat(lngStr);
+            } else if (parts.length === 2) {
+                // Format: 58.4044691, 15.5850459
+                lat = parseFloat(parts[0].replace(',', '.').trim());
+                lng = parseFloat(parts[1].replace(',', '.').trim());
+            } else {
                 alert("Please enter coordinates in the format: 58,4044691, 15,5850459");
                 return;
             }
-
-            // Replace comma with dot for decimal values
-            const lat = parseFloat(parts[0].replace(',', '.'));
-            const lng = parseFloat(parts[1].replace(',', '.'));
 
             if (isNaN(lat) || isNaN(lng)) {
                 alert("Invalid coordinate values.");
@@ -182,7 +187,6 @@
             updateCalculateButton();
         }
 
-        // Update map
         function updateMap() {
             markers.forEach(marker => marker.setMap(null));
             markers = [];
@@ -215,7 +219,6 @@
             }
         }
 
-        // Update points list
         function updatePointsList() {
             const pointsList = document.getElementById('pointsList');
             pointsList.innerHTML = '';
@@ -228,7 +231,6 @@
             });
         }
 
-        // Delete a point
         function deletePoint(index) {
             points.splice(index, 1);
             updateMap();
@@ -237,13 +239,11 @@
             document.getElementById('result').innerHTML = '';
         }
 
-        // Enable/disable calculate button
         function updateCalculateButton() {
             const calculateBtn = document.getElementById('calculateBtn');
             calculateBtn.disabled = points.length < 3;
         }
 
-        // Calculate area using Shoelace formula
         function calculateArea() {
             if (points.length < 3) {
                 alert("At least 3 points are required to calculate an area.");
@@ -274,9 +274,7 @@
         }
     </script>
 
-    <!-- Replace YOUR_API_KEY with your actual Google Maps API key -->
-    <script async
-        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
-    </script>
+    <!-- Load Google Maps API -->
+    <script async src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
 </body>
 </html>
