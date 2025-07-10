@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Area Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #pointsList {
+            margin: 20px 0;
+            text-align: left;
+            display: inline-block;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>GPS Area Calculator</h1>
+    <button onclick="capturePoint()">Capture Point</button>
+    <button onclick="calculateArea()">Calculate Area</button>
+    <div id="pointsList"></div>
+    <div id="result"></div>
+
+    <script>
+        let points = [];
+
+        function capturePoint() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        points.push({ lat, lon });
+                        updatePointsList();
+                    },
+                    error => {
+                        alert('Error getting GPS location: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        }
+
+        function updatePointsList() {
+            const pointsList = document.getElementById('pointsList');
+            pointsList.innerHTML = '<h3>Captured Points:</h3>';
+            points.forEach((point, index) => {
+                pointsList.innerHTML += `Point ${index + 1}: Lat ${point.lat.toFixed(6)}, Lon ${point.lon.toFixed(6)}<br>`;
+            });
+        }
+
+        function calculateArea() {
+            if (points.length < 3) {
+                alert('At least 3 points are required to calculate an area.');
+                return;
+            }
+
+            // Convert GPS coordinates to approximate meters using a simple flat projection
+            const referenceLat = points[0].lat;
+            const pointsInMeters = points.map(point => {
+                const latDiff = (point.lat - referenceLat) * 111320; // Approx meters per degree latitude
+                const lonDiff = (point.lon - points[0].lon) * 111320 * Math.cos(referenceLat * Math.PI / 180); // Approx meters per degree longitude
+                return { x: lonDiff, y: latDiff };
+            });
+
+            // Shoelace formula to calculate area
+            let area = 0;
+            for (let i = 0; i < pointsInMeters.length; i++) {
+                const j = (i + 1) % pointsInMeters.length;
+                area += pointsInMeters[i].x * pointsInMeters[j].y;
+                area -= pointsInMeters[j].x * pointsInMeters[i].y;
+            }
+            area = Math.abs(area) / 2;
+
+            document.getElementById('result').innerHTML = `Calculated Area: ${area.toFixed(2)} square meters`;
+        }
+    </script>
+</body>
+</html>
