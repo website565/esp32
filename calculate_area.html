@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,6 +31,7 @@
 <body>
     <h1>GPS Area Calculator</h1>
     <button onclick="capturePoint()">Capture Point</button>
+    <button onclick="removeLastPoint()">Remove Last Point</button>
     <button onclick="calculateArea()">Calculate Area</button>
     <div id="pointsList"></div>
     <div id="result"></div>
@@ -55,12 +57,25 @@
             }
         }
 
+        function removeLastPoint() {
+            if (points.length > 0) {
+                points.pop();
+                updatePointsList();
+            } else {
+                alert('No points to remove.');
+            }
+        }
+
         function updatePointsList() {
             const pointsList = document.getElementById('pointsList');
             pointsList.innerHTML = '<h3>Captured Points:</h3>';
-            points.forEach((point, index) => {
-                pointsList.innerHTML += `Point ${index + 1}: Lat ${point.lat.toFixed(6)}, Lon ${point.lon.toFixed(6)}<br>`;
-            });
+            if (points.length === 0) {
+                pointsList.innerHTML += 'No points captured yet.';
+            } else {
+                points.forEach((point, index) => {
+                    pointsList.innerHTML += `Point ${index + 1}: Lat ${point.lat.toFixed(6)}, Lon ${point.lon.toFixed(6)}<br>`;
+                });
+            }
         }
 
         function calculateArea() {
