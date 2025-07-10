@@ -64,7 +64,7 @@
         input {
             margin: 5px;
             padding: 8px;
-            width: 120px;
+            width: 160px;
         }
         @media (max-width: 600px) {
             body { padding: 10px; }
@@ -78,11 +78,20 @@
     <h1>Land Area Calculator with Map</h1>
     <div id="map"></div>
     <button id="addPointBtn" onclick="getGPSPoint()">Add GPS Point</button>
+
+    <!-- Manual point input -->
     <div>
         <input id="latInput" type="number" step="any" placeholder="Latitude">
         <input id="lngInput" type="number" step="any" placeholder="Longitude">
         <button onclick="addManualPoint()">Add Manual Point</button>
     </div>
+
+    <!-- Combined coordinates input -->
+    <div>
+        <input id="combinedInput" type="text" placeholder="58,4044691, 15,5850459">
+        <button onclick="parseAndAddCombined()">Add Combined</button>
+    </div>
+
     <button id="calculateBtn" onclick="calculateArea()" disabled>Calculate Area</button>
     <div id="pointsList"></div>
     <div id="result"></div>
@@ -95,7 +104,7 @@
         // Initialize Google Maps
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 58.404472, lng: 15.584845 }, // Default center (your first point)
+                center: { lat: 58.404472, lng: 15.584845 },
                 zoom: 18
             });
         }
@@ -148,13 +157,36 @@
             updateCalculateButton();
         }
 
-        // Update map with markers and polygon
+        // Add combined coordinate string like "58,4044691, 15,5850459"
+        function parseAndAddCombined() {
+            const input = document.getElementById('combinedInput').value.trim();
+            const parts = input.split(',');
+            if (parts.length !== 2) {
+                alert("Please enter coordinates in the format: 58,4044691, 15,5850459");
+                return;
+            }
+
+            // Replace comma with dot for decimal values
+            const lat = parseFloat(parts[0].replace(',', '.'));
+            const lng = parseFloat(parts[1].replace(',', '.'));
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("Invalid coordinate values.");
+                return;
+            }
+
+            points.push({ lat, lng });
+            document.getElementById('combinedInput').value = '';
+            updateMap();
+            updatePointsList();
+            updateCalculateButton();
+        }
+
+        // Update map
         function updateMap() {
-            // Clear existing markers
             markers.forEach(marker => marker.setMap(null));
             markers = [];
 
-            // Add new markers
             points.forEach(point => {
                 const marker = new google.maps.Marker({
                     position: point,
@@ -163,7 +195,6 @@
                 markers.push(marker);
             });
 
-            // Update polygon
             if (polygon) {
                 polygon.setMap(null);
             }
@@ -179,7 +210,6 @@
                 polygon.setMap(map);
             }
 
-            // Center map on the first point or average of points
             if (points.length > 0) {
                 map.setCenter(points[0]);
             }
@@ -220,14 +250,13 @@
                 return;
             }
 
-            // Check for identical or collinear points
             const uniquePoints = new Set(points.map(p => `${p.lat},${p.lng}`));
             if (uniquePoints.size < 3) {
                 alert("Points are too close or identical. Please add distinct points.");
                 return;
             }
 
-            const R = 6371000; // Earth's radius in meters
+            const R = 6371000;
             let area = 0;
             const n = points.length;
 
@@ -244,7 +273,8 @@
             document.getElementById('result').innerHTML = `Area: ${area.toFixed(2)} square meters`;
         }
     </script>
-    <!-- Load Google Maps API (replace YOUR_API_KEY with your actual API key) -->
+
+    <!-- Replace YOUR_API_KEY with your actual Google Maps API key -->
     <script async
         src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap">
     </script>
