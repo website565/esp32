@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -264,6 +265,12 @@
       right: 10px;
       cursor: pointer;
     }
+    .error-message {
+      color: red;
+      text-align: center;
+      margin: 10px 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -320,6 +327,7 @@
     <div class="modal-content">
       <button class="close-button" id="closeModal">×</button>
       <h2>Setup Parameters</h2>
+      <div id="errorMessage" class="error-message"></div>
       <h3>General Settings</h3>
       <label for="maxSpeed">Maximum Trip Speed (km/h):</label>
       <input type="number" id="maxSpeed" min="1" max="99" value="25">
@@ -366,7 +374,7 @@
       <input type="number" id="p5" min="0" max="40" value="12">
       <h3>C Parameters</h3>
       <label for="c1">C1 (Power-Assist Sensor):</label>
-      <select id="c3">
+      <select id="c1">
         <option value="0">Forward 5/8/10 Signal (Higher/Standard/Highest)</option>
         <option value="1">Forward 5/8/10 Signal (Lower/Standard)</option>
         <option value="2">Forward 5/8/10 Signal (Lowest/Lower)</option>
@@ -379,7 +387,7 @@
         <option value="0">Gear 0</option>
         <option value="1">Gear 1</option>
         <option value="2">Gear 2</option>
-        <option value="3">Gear代替
+        <option value="3">Gear 3</option>
         <option value="4">Gear 4</option>
         <option value="5">Gear 5</option>
         <option value="8" selected>Restore Last Gear</option>
@@ -457,6 +465,7 @@
     const setupModal = document.getElementById('setupModal');
     const closeModal = document.getElementById('closeModal');
     const saveSettings = document.getElementById('saveSettings');
+    const errorMessage = document.getElementById('errorMessage');
     const assistDisplay = document.getElementById("assistDisplay");
     const speedDisplay = document.getElementById("speedDisplay");
     const speedCircle = document.getElementById("speedCircle");
@@ -511,6 +520,7 @@
         document.getElementById('l1').value = settings.l1 || '0';
         document.getElementById('l2').value = settings.l2 || '0';
         document.getElementById('l4').value = settings.l4 || 5;
+        console.log("Settings loaded from localStorage:", settings);
       }
     }
 
@@ -530,9 +540,7 @@
     function updateClock() {
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, "0");
-      const minutes
-
- = String(now.getMinutes()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
       clockDisplay.textContent = `${hours}:${minutes}`;
     }
 
@@ -600,55 +608,79 @@
 
     // Save Settings to localStorage and ESP32
     function saveSettingsToESP32() {
+      const errorMessageElement = document.getElementById('errorMessage');
+      errorMessageElement.style.display = 'none';
+      errorMessageElement.textContent = '';
+
+      const settings = {
+        maxSpeed: parseInt(document.getElementById('maxSpeed').value) || 25,
+        wheelDiameter: document.getElementById('wheelDiameter').value || '26',
+        unit: parseInt(document.getElementById('unit').value) || 0,
+        p1: parseInt(document.getElementById('p1').value) || 1,
+        p2: parseInt(document.getElementById('p2').value) || 1,
+        p3: parseInt(document.getElementById('p3').value) || 1,
+        p4: parseInt(document.getElementById('p4').value) || 1,
+        p5: parseInt(document.getElementById('p5').value) || 12,
+        c1: parseInt(document.getElementById('c1').value) || 0,
+        c3: parseInt(document.getElementById('c3').value) || 8,
+        c4: parseInt(document.getElementById('c4').value) || 0,
+        c5: parseInt(document.getElementById('c5').value) || 10,
+        c6: parseInt(document.getElementById('c6').value) || 3,
+        c7: parseInt(document.getElementById('c7').value) || 1,
+        c8: parseInt(document.getElementById('c8').value) || 1,
+        c9: parseInt(document.getElementById('c9').value) || 0,
+        c10: document.getElementById('c10').value || 'N',
+        c11: parseInt(document.getElementById('c11').value) || 0,
+        c12: parseInt(document.getElementById('c12').value) || 4,
+        c13: parseInt(document.getElementById('c13').value) || 0,
+        c14: parseInt(document.getElementById('c14').value) || 2,
+        l1: parseInt(document.getElementById('l1').value) || 0,
+        l2: parseInt(document.getElementById('l2').value) || 0,
+        l4: parseInt(document.getElementById('l4').value) || 5
+      };
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('ebikeSettings', JSON.stringify(settings));
+        console.log("Settings saved to localStorage:", settings);
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+        errorMessageElement.textContent = "Failed to save settings locally.";
+        errorMessageElement.style.display = 'block';
+        return;
+      }
+
+      // Send to ESP32
       if (!bleServer || !bleServer.connected) {
         console.log("Not connected to ESP32");
+        errorMessageElement.textContent = "Not connected to ESP32. Please connect via Bluetooth.";
+        errorMessageElement.style.display = 'block';
         updateBluetoothButton();
         return;
       }
 
-      const settings = {
-        maxSpeed: parseInt(document.getElementById('maxSpeed').value),
-        wheelDiameter: document.getElementById('wheelDiameter').value,
-        unit: parseInt(document.getElementById('unit').value),
-        p1: parseInt(document.getElementById('p1').value),
-        p2: parseInt(document.getElementById('p2').value),
-        p3: parseInt(document.getElementById('p3').value),
-        p4: parseInt(document.getElementById('p4').value),
-        p5: parseInt(document.getElementById('p5').value),
-        c1: parseInt(document.getElementById('c1').value),
-        c3: parseInt(document.getElementById('c3').value),
-        c4: parseInt(document.getElementById('c4').value),
-        c5: parseInt(document.getElementById('c5').value),
-        c6: parseInt(document.getElementById('c6').value),
-        c7: parseInt(document.getElementById('c7').value),
-        c8: parseInt(document.getElementById('c8').value),
-        c9: parseInt(document.getElementById('c9').value),
-        c10: document.getElementById('c10').value,
-        c11: parseInt(document.getElementById('c11').value),
-        c12: parseInt(document.getElementById('c12').value),
-        c13: parseInt(document.getElementById('c13').value),
-        c14: parseInt(document.getElementById('c14').value),
-        l1: parseInt(document.getElementById('l1').value),
-        l2: parseInt(document.getElementById('l2').value),
-        l4: parseInt(document.getElementById('l4').value)
-      };
-
-      // Save to localStorage
-      localStorage.setItem('ebikeSettings', JSON.stringify(settings));
-
-      // Send to ESP32
+      // Optimize JSON payload size
       const dataString = JSON.stringify(settings);
+      if (dataString.length > 512) {
+        console.error("Settings data too large for BLE:", dataString.length);
+        errorMessageElement.textContent = "Settings data too large for Bluetooth.";
+        errorMessageElement.style.display = 'block';
+        return;
+      }
+
       const data = new TextEncoder().encode(dataString);
 
       bleServer.getPrimaryService(bleService)
         .then(service => service.getCharacteristic(ledCharacteristic))
         .then(characteristic => characteristic.writeValue(data))
         .then(() => {
-          console.log("Settings saved to ESP32:", settings);
-          setupModal.style.display = 'none';
+          console.log("Settings sent to ESP32:", settings);
+          setupModal.style.display = 'none'; // Close modal
         })
         .catch(error => {
-          console.error("Error saving settings:", error);
+          console.error("Error sending settings to ESP32:", error);
+          errorMessageElement.textContent = "Failed to send settings to ESP32.";
+          errorMessageElement.style.display = 'block';
           updateBluetoothButton();
         });
     }
@@ -710,7 +742,7 @@
           updateBluetoothButton();
         }
 
-        device.addEventListener('gattservicedisconnected', () => {
+        device.addEventListener('gattserverdisconnected', () => {
           resetDisplay();
           bleServer = null;
           isConnected = false;
