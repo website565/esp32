@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -582,6 +583,7 @@
         localStorage.setItem('tripTodayDistance', '0.0');
         localStorage.setItem('tripTodayDate', today);
         console.log("Trip today reset due to new day or no saved date");
+        resetTripTodayOnESP32(); // Reset tripTodayDistance on ESP32
       }
 
       lastDate = today;
@@ -615,12 +617,29 @@
     function updateDateDisplay() {
       const today = new Date().toISOString().split('T')[0];
       dateDisplay.textContent = today;
-      if (today !== lastDate) {
+      if (today !== lastDate && lastDate !== null) {
         tripTodayDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
         localStorage.setItem('tripTodayDistance', '0.0');
         localStorage.setItem('tripTodayDate', today);
         console.log("Trip today reset due to new day:", today);
-        lastDate = today;
+        resetTripTodayOnESP32(); // Reset tripTodayDistance on ESP32
+      }
+      lastDate = today;
+    }
+
+    // Reset tripTodayDistance on ESP32
+    function resetTripTodayOnESP32() {
+      if (bleServer && bleServer.connected) {
+        bleServer.getPrimaryService(bleService)
+          .then(service => service.getCharacteristic(ledCharacteristic))
+          .then(characteristic => {
+            const data = new Uint8Array([252]); // Command to reset trip today
+            return characteristic.writeValue(data);
+          })
+          .then(() => console.log("Trip today reset command sent to ESP32"))
+          .catch(error => console.error("Error sending trip today reset to ESP32:", error));
+      } else {
+        console.log("Not connected to ESP32, trip today reset locally only");
       }
     }
 
