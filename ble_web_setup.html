@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -296,7 +297,7 @@
         <div class="inner-circle"></div>
         <div class="value-container">
           <div class="speed-value" id="speedDisplay">0.0</div>
-          <div class="speed-unit">km/h</div>
+          <div class="speed-unit" id="speedUnit">km/h</div>
           <div class="power-value" id="powerDisplay">0</div>
           <div class="power-unit">W</div>
         </div>
@@ -309,12 +310,12 @@
       <div class="assist-section">
         <div class="odo">
           <div id="odoDisplay">1398 km</div>
-          <div>ODO</div>
+          <div id="odoUnit">ODO</div>
         </div>
         <div class="assist-circle" id="assistDisplay">0</div>
         <div class="trip">
           <div id="tripDisplay">0.0 km</div>
-          <div>TRIP</div>
+          <div id="tripUnit">TRIP</div>
         </div>
       </div>
       <div class="assist-plus">
@@ -468,12 +469,15 @@
     const assistDisplay = document.getElementById("assistDisplay");
     const speedDisplay = document.getElementById("speedDisplay");
     const speedCircle = document.getElementById("speedCircle");
+    const speedUnit = document.getElementById("speedUnit");
     const powerDisplay = document.getElementById("powerDisplay");
     const powerCircle = document.getElementById("powerCircle");
     const clockDisplay = document.getElementById("clockDisplay");
     const batteryDisplay = document.getElementById("batteryDisplay");
     const tripDisplay = document.getElementById("tripDisplay");
     const odoDisplay = document.getElementById("odoDisplay");
+    const tripUnit = document.getElementById("tripUnit");
+    const odoUnit = document.getElementById("odoUnit");
 
     // BLE Device Specs
     const deviceName = 'ESP32';
@@ -489,6 +493,7 @@
     let lightState = false;
     let cachedDevice = null;
     let isConnected = false;
+    let currentUnit = 0; // Default to km/h, km, °C
 
     // Load settings and assist level from localStorage
     function loadSettings() {
@@ -519,6 +524,8 @@
         document.getElementById('l1').value = settings.l1 || '0';
         document.getElementById('l2').value = settings.l2 || '0';
         document.getElementById('l4').value = settings.l4 || 5;
+        currentUnit = parseInt(settings.unit) || 0;
+        updateUnitDisplay();
         console.log("Settings loaded from localStorage:", settings);
       }
 
@@ -528,6 +535,19 @@
         assistLevel = Math.max(0, Math.min(9, assistLevel)); // Ensure within 0-9
         assistDisplay.textContent = assistLevel;
         console.log("Assist level loaded from localStorage:", assistLevel);
+      }
+    }
+
+    // Update unit display based on currentUnit
+    function updateUnitDisplay() {
+      if (currentUnit === 1) {
+        speedUnit.textContent = 'mph';
+        tripUnit.textContent = 'TRIP';
+        odoUnit.textContent = 'ODO';
+      } else {
+        speedUnit.textContent = 'km/h';
+        tripUnit.textContent = 'TRIP';
+        odoUnit.textContent = 'ODO';
       }
     }
 
@@ -660,19 +680,23 @@
       // Save to localStorage
       try {
         localStorage.setItem('ebikeSettings', JSON.stringify(settings));
+        currentUnit = settings.unit;
+        updateUnitDisplay();
         console.log("Settings saved to localStorage:", settings);
       } catch (error) {
         console.error("Error saving to localStorage:", error);
         errorMessageElement.textContent = "Failed to save settings locally.";
         errorMessageElement.style.display = 'block';
+        setupModal.style.display = 'none'; // Close modal regardless
         return;
       }
 
       // Send to ESP32
       if (!bleServer || !bleServer.connected) {
-        console.log("Not connected to ESP32");
-        errorMessageElement.textContent = "Not connected to ESP32. Please connect via Bluetooth.";
+        console.log("Not connected to ESP32, saving locally only");
+        errorMessageElement.textContent = "Not connected to ESP32. Settings saved locally.";
         errorMessageElement.style.display = 'block';
+        setupModal.style.display = 'none'; // Close modal
         updateBluetoothButton();
         return;
       }
@@ -683,6 +707,7 @@
         console.error("Settings data too large for BLE:", dataString.length);
         errorMessageElement.textContent = "Settings data too large for Bluetooth.";
         errorMessageElement.style.display = 'block';
+        setupModal.style.display = 'none'; // Close modal
         return;
       }
 
@@ -699,14 +724,16 @@
           console.error("Error sending settings to ESP32:", error);
           errorMessageElement.textContent = "Failed to send settings to ESP32.";
           errorMessageElement.style.display = 'block';
+          setupModal.style.display = 'none'; // Close modal
           updateBluetoothButton();
         });
     }
 
     // Speed Update
     function updateSpeed(speed) {
-      speedDisplay.textContent = speed.toFixed(1);
-      const speedPercent = Math.min((speed / 100) * 100, 100);
+      const displaySpeed = currentUnit === 1 ? speed * 0.621371 : speed; // Convert km/h to mph if unit is 1
+      speedDisplay.textContent = displaySpeed.toFixed(1);
+      const speedPercent = Math.min((displaySpeed / (currentUnit === 1 ? 62 : 100)) * 100, 100);
       speedCircle.style.background = `conic-gradient(#00ff99 0% ${speedPercent}%, #333 ${speedPercent}% 100%)`;
     }
 
@@ -724,8 +751,10 @@
     // Battery and Trip Update
     function updateDisplay(battery, trip, odo) {
       batteryDisplay.textContent = `🔋 ${Math.round(battery)}%`;
-      tripDisplay.textContent = `${trip.toFixed(1)} km`;
-      odoDisplay.textContent = `${Math.round(odo)} km`;
+      const displayTrip = currentUnit === 1 ? trip * 0.621371 : trip; // Convert km to miles
+      const displayOdo = currentUnit === 1 ? odo * 0.621371 : odo; // Convert km to miles
+      tripDisplay.textContent = `${displayTrip.toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `${Math.round(displayOdo)} ${currentUnit === 1 ? 'miles' : 'km'}`;
     }
 
     // BLE Functions
@@ -826,13 +855,13 @@
       updateSpeed(0); // Always start at 0
       updatePower(0); // Always start at 0
       batteryDisplay.textContent = `🔋 0%`;
-      tripDisplay.textContent = `0.0 km`;
-      odoDisplay.textContent = `1398 km`;
+      tripDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `1398 ${currentUnit === 1 ? 'miles' : 'km'}`;
       lightState = false;
       lightButton.innerHTML = `<img src="images/grok_image_t6uncz.png" alt="Light Off">`;
       isConnected = false;
       updateBluetoothButton();
-      // Assist level is not reset here to preserve the last value
+      // Assist level is not reset to preserve the last value
     }
 
     function disconnectDevice() {
