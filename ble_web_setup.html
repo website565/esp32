@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -163,13 +164,13 @@
       width: 100%;
       margin-top: 10px;
     }
-    .odo, .trip, .trip-today, .date {
+    .trip, .trip-today, .odo, .date {
       text-align: center;
       font-size: 0.95em; /* Reduced to fit within 420px */
       margin: 5px 0;
       width: 100%;
     }
-    .trip, .trip-today {
+    .trip {
       cursor: pointer; /* Indicate clickability for reset */
     }
     .assist-section {
@@ -307,9 +308,9 @@
       </div>
     </div>
     <div class="bottom-info">
-      <div class="odo" id="odoDisplay">ODO 1398 km</div>
       <div class="trip" id="tripDisplay">TRIP 0.0 km</div>
       <div class="trip-today" id="tripTodayDisplay">TRIP TODAY 0.0 km</div>
+      <div class="odo" id="odoDisplay">ODO 1398 km</div>
       <div class="date" id="dateDisplay">13.07.2025</div>
       <div class="assist-section">
         <div class="assist-minus">
@@ -473,9 +474,9 @@
     const powerCircle = document.getElementById("powerCircle");
     const clockDisplay = document.getElementById("clockDisplay");
     const batteryDisplay = document.getElementById("batteryDisplay");
-    const odoDisplay = document.getElementById("odoDisplay");
     const tripDisplay = document.getElementById("tripDisplay");
     const tripTodayDisplay = document.getElementById("tripTodayDisplay");
+    const odoDisplay = document.getElementById("odoDisplay");
     const dateDisplay = document.getElementById("dateDisplay");
 
     // BLE Device Specs
@@ -550,11 +551,7 @@
         tripTodayDisplay.textContent = `TRIP TODAY ${parseFloat(savedTripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
         console.log("Trip today distance loaded from localStorage:", savedTripToday);
       } else {
-        tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
-        localStorage.setItem('tripTodayDistance', '0.0');
-        localStorage.setItem('tripTodayDate', today);
-        console.log("Trip today reset due to new day or no saved date");
-        resetTripTodayOnESP32(); // Reset tripTodayDistance on ESP32
+        resetTripToday();
       }
 
       updateDateDisplay();
@@ -587,15 +584,20 @@
     function checkDateAndResetTripToday() {
       const today = new Date().toISOString().split('T')[0];
       if (today !== lastDate && lastDate !== null) {
-        const unit = currentUnit === 1 ? 'miles' : 'km';
-        tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${unit}`;
-        localStorage.setItem('tripTodayDistance', '0.0');
-        localStorage.setItem('tripTodayDate', today);
-        console.log("Trip today reset due to new day:", today);
-        resetTripTodayOnESP32();
+        resetTripToday();
       }
       lastDate = today;
       updateDateDisplay();
+    }
+
+    // Reset tripTodayDistance
+    function resetTripToday() {
+      const unit = currentUnit === 1 ? 'miles' : 'km';
+      tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${unit}`;
+      localStorage.setItem('tripTodayDistance', '0.0');
+      localStorage.setItem('tripTodayDate', new Date().toISOString().split('T')[0]);
+      console.log("Trip today reset due to new day");
+      resetTripTodayOnESP32();
     }
 
     // Reset tripTodayDistance on ESP32
@@ -650,11 +652,6 @@
     tripDisplay.addEventListener('click', () => {
       if (confirm("Želite li resetirati TRIP na 0.0?")) {
         resetTrip();
-      }
-    });
-    tripTodayDisplay.addEventListener('click', () => {
-      if (confirm("Želite li resetirati TRIP TODAY na 0.0?")) {
-        resetTripToday();
       }
     });
 
@@ -718,16 +715,6 @@
           .then(() => console.log("Trip reset command sent to ESP32"))
           .catch(error => console.error("Error sending trip reset to ESP32:", error));
       }
-    }
-
-    // Reset Trip Today
-    function resetTripToday() {
-      const unit = currentUnit === 1 ? 'miles' : 'km';
-      tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${unit}`;
-      localStorage.setItem('tripTodayDistance', '0.0');
-      localStorage.setItem('tripTodayDate', new Date().toISOString().split('T')[0]);
-      console.log("Trip today distance reset to 0.0");
-      resetTripTodayOnESP32();
     }
 
     // Light Toggle
@@ -868,9 +855,9 @@
       const displayTrip = currentUnit === 1 ? trip * 0.621371 : trip;
       const displayTripToday = currentUnit === 1 ? tripToday * 0.621371 : tripToday;
       const displayOdo = currentUnit === 1 ? odo * 0.621371 : odo;
-      odoDisplay.textContent = `ODO ${Math.round(displayOdo)} ${unit}`;
       tripDisplay.textContent = `TRIP ${displayTrip.toFixed(1)} ${unit}`;
       tripTodayDisplay.textContent = `TRIP TODAY ${displayTripToday.toFixed(1)} ${unit}`;
+      odoDisplay.textContent = `ODO ${Math.round(displayOdo)} ${unit}`;
       saveTripDistances(trip, tripToday);
     }
 
@@ -914,9 +901,7 @@
 
         bleServer = await device.gatt.connect();
         isConnected = true;
-        bleServiceFound = await ble
-
-Server.getPrimaryService(bleService);
+        bleServiceFound = await bleServer.getPrimaryService(bleService);
         sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
         sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
         await sensorCharacteristicFound.startNotifications();
@@ -974,9 +959,9 @@ Server.getPrimaryService(bleService);
       const trip = parseFloat(localStorage.getItem('tripDistance') || '0.0');
       const tripToday = parseFloat(localStorage.getItem('tripTodayDistance') || '0.0');
       const odo = 1398;
-      odoDisplay.textContent = `ODO ${Math.round(currentUnit === 1 ? odo * 0.621371 : odo)} ${unit}`;
       tripDisplay.textContent = `TRIP ${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${unit}`;
       tripTodayDisplay.textContent = `TRIP TODAY ${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${unit}`;
+      odoDisplay.textContent = `ODO ${Math.round(currentUnit === 1 ? odo * 0.621371 : odo)} ${unit}`;
       updateDateDisplay();
       lightState = false;
       lightButton.innerHTML = `<img src="images/grok_image_t6uncz.png" alt="Light Off">`;
