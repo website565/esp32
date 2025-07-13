@@ -536,6 +536,9 @@
         assistDisplay.textContent = assistLevel;
         console.log("Assist level loaded from localStorage:", assistLevel);
       }
+
+      // Ensure speed and power start at 0
+      resetDisplay();
     }
 
     // Update unit display based on currentUnit
@@ -802,8 +805,6 @@
         sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
         sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
         await sensorCharacteristicFound.startNotifications();
-        const value = await sensorCharacteristicFound.readValue();
-        handleDataUpdate(new TextDecoder().decode(value));
         updateBluetoothButton();
 
         // Request assist level from ESP32
@@ -881,6 +882,7 @@
               console.error("Error disconnecting:", error);
               isConnected = false;
               updateBluetoothButton();
+              resetDisplay();
             });
         } else {
           bleServer.disconnect()
@@ -895,6 +897,7 @@
               console.error("Error disconnecting:", error);
               isConnected = false;
               updateBluetoothButton();
+              resetDisplay();
             });
         }
       } else {
