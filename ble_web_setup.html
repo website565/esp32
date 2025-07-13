@@ -187,10 +187,25 @@
       align-items: center;
       flex: 1;
     }
-    .assist-section .odo, .assist-section .trip {
+    .assist-section .odo, .assist-section .trip, .assist-section .trip-today {
       text-align: center;
       font-size: 1.2em;
       margin: 5px 0;
+    }
+    .assist-section .date {
+      text-align: center;
+      font-size: 1em;
+      margin: 5px 0;
+    }
+    .assist-section .trip-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+    .assist-section .trip, .assist-section .trip-today {
+      flex: 1;
+      cursor: pointer;
     }
     .assist-circle {
       width: 60px;
@@ -312,11 +327,18 @@
           <div id="odoDisplay">1398 km</div>
           <div id="odoUnit">ODO</div>
         </div>
-        <div class="assist-circle" id="assistDisplay">0</div>
-        <div class="trip">
-          <div id="tripDisplay">0.0 km</div>
-          <div id="tripUnit">TRIP</div>
+        <div class="trip-container">
+          <div class="trip">
+            <div id="tripDisplay">0.0 km</div>
+            <div id="tripUnit">TRIP</div>
+          </div>
+          <div class="trip-today">
+            <div id="tripTodayDisplay">0.0 km</div>
+            <div id="tripTodayUnit">TODAY TRIP</div>
+          </div>
         </div>
+        <div class="date" id="dateDisplay">2025-07-13</div>
+        <div class="assist-circle" id="assistDisplay">0</div>
       </div>
       <div class="assist-plus">
         <button id="assistPlusButton">+</button>
@@ -478,6 +500,9 @@
     const odoDisplay = document.getElementById("odoDisplay");
     const tripUnit = document.getElementById("tripUnit");
     const odoUnit = document.getElementById("odoUnit");
+    const tripTodayDisplay = document.getElementById("tripTodayDisplay");
+    const tripTodayUnit = document.getElementById("tripTodayUnit");
+    const dateDisplay = document.getElementById("dateDisplay");
 
     // BLE Device Specs
     const deviceName = 'ESP32';
@@ -494,8 +519,9 @@
     let cachedDevice = null;
     let isConnected = false;
     let currentUnit = 0; // Default to km/h, km, °C
+    let lastDate = null;
 
-    // Load settings and assist level from localStorage
+    // Load settings, assist level, and trip data from localStorage
     function loadSettings() {
       const savedSettings = localStorage.getItem('ebikeSettings');
       if (savedSettings) {
@@ -537,7 +563,27 @@
         console.log("Assist level loaded from localStorage:", assistLevel);
       }
 
-      // Ensure speed and power start at 0
+      const savedTrip = localStorage.getItem('tripDistance');
+      if (savedTrip !== null) {
+        tripDisplay.textContent = `${parseFloat(savedTrip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+        console.log("Trip distance loaded from localStorage:", savedTrip);
+      }
+
+      const savedTripToday = localStorage.getItem('tripTodayDistance');
+      const savedDate = localStorage.getItem('tripTodayDate');
+      const today = new Date().toISOString().split('T')[0];
+      if (savedTripToday !== null && savedDate === today) {
+        tripTodayDisplay.textContent = `${parseFloat(savedTripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+        console.log("Trip today distance loaded from localStorage:", savedTripToday);
+      } else {
+        tripTodayDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+        localStorage.setItem('tripTodayDistance', '0.0');
+        localStorage.setItem('tripTodayDate', today);
+        console.log("Trip today reset due to new day or no saved date");
+      }
+
+      lastDate = today;
+      updateDateDisplay();
       resetDisplay();
     }
 
@@ -546,11 +592,33 @@
       if (currentUnit === 1) {
         speedUnit.textContent = 'mph';
         tripUnit.textContent = 'TRIP';
+        tripTodayUnit.textContent = 'TODAY TRIP';
         odoUnit.textContent = 'ODO';
       } else {
         speedUnit.textContent = 'km/h';
         tripUnit.textContent = 'TRIP';
+        tripTodayUnit.textContent = 'TODAY TRIP';
         odoUnit.textContent = 'ODO';
+      }
+      // Update displayed values with correct units
+      const trip = parseFloat(localStorage.getItem('tripDistance') || '0.0');
+      const tripToday = parseFloat(localStorage.getItem('tripTodayDistance') || '0.0');
+      const odo = parseFloat(odoDisplay.textContent) || 1398;
+      tripDisplay.textContent = `${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      tripTodayDisplay.textContent = `${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `${(currentUnit === 1 ? odo * 0.621371 : odo).toFixed(0)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+    }
+
+    // Update date display
+    function updateDateDisplay() {
+      const today = new Date().toISOString().split('T')[0];
+      dateDisplay.textContent = today;
+      if (today !== lastDate) {
+        tripTodayDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+        localStorage.setItem('tripTodayDistance', '0.0');
+        localStorage.setItem('tripTodayDate', today);
+        console.log("Trip today reset due to new day:", today);
+        lastDate = today;
       }
     }
 
@@ -564,7 +632,19 @@
       }
     }
 
-    // Button Event Listeners
+    // Save trip distances to localStorage
+    function saveTripDistances(trip, tripToday) {
+      try {
+        localStorage.setItem('tripDistance', trip.toFixed(1));
+        localStorage.setItem('tripTodayDistance', tripToday.toFixed(1));
+        localStorage.setItem('tripTodayDate', new Date().toISOString().split('T')[0]);
+        console.log("Trip distances saved to localStorage:", { trip, tripToday });
+      } catch (error) {
+        console.error("Error saving trip distances to localStorage:", error);
+      }
+    }
+
+    // Button and Click Event Listeners
     bluetoothButton.addEventListener('click', toggleBluetooth);
     assistPlusButton.addEventListener('click', () => changeAssist(1));
     assistMinusButton.addEventListener('click', () => changeAssist(-1));
@@ -575,6 +655,11 @@
     });
     closeModal.addEventListener('click', () => setupModal.style.display = 'none');
     saveSettings.addEventListener('click', saveSettingsToESP32);
+    tripDisplay.parentElement.addEventListener('click', () => {
+      if (confirm("Želite li resetirati TRIP na 0.0?")) {
+        resetTrip();
+      }
+    });
 
     // Clock Update
     function updateClock() {
@@ -582,6 +667,7 @@
       const hours = String(now.getHours()).padStart(2, "0");
       const minutes = String(now.getMinutes()).padStart(2, "0");
       clockDisplay.textContent = `${hours}:${minutes}`;
+      updateDateDisplay(); // Check for new day
     }
 
     // Bluetooth Toggle
@@ -599,7 +685,7 @@
       if (assistLevel < 0) assistLevel = 0;
       if (assistLevel > 9) assistLevel = 9;
       assistDisplay.textContent = assistLevel;
-      saveAssistLevel(); // Save to localStorage
+      saveAssistLevel();
 
       if (bleServer && bleServer.connected) {
         bleServer.getPrimaryService(bleService)
@@ -616,6 +702,23 @@
       } else {
         console.log("Not connected to ESP32");
         updateBluetoothButton();
+      }
+    }
+
+    // Reset Trip
+    function resetTrip() {
+      tripDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+      localStorage.setItem('tripDistance', '0.0');
+      console.log("Trip distance reset to 0.0");
+      if (bleServer && bleServer.connected) {
+        bleServer.getPrimaryService(bleService)
+          .then(service => service.getCharacteristic(ledCharacteristic))
+          .then(characteristic => {
+            const data = new Uint8Array([253]); // Command to reset trip
+            return characteristic.writeValue(data);
+          })
+          .then(() => console.log("Trip reset command sent to ESP32"))
+          .catch(error => console.error("Error sending trip reset to ESP32:", error));
       }
     }
 
@@ -680,7 +783,6 @@
         l4: parseInt(document.getElementById('l4').value) || 5
       };
 
-      // Save to localStorage
       try {
         localStorage.setItem('ebikeSettings', JSON.stringify(settings));
         currentUnit = settings.unit;
@@ -690,27 +792,25 @@
         console.error("Error saving to localStorage:", error);
         errorMessageElement.textContent = "Failed to save settings locally.";
         errorMessageElement.style.display = 'block';
-        setupModal.style.display = 'none'; // Close modal regardless
+        setupModal.style.display = 'none';
         return;
       }
 
-      // Send to ESP32
       if (!bleServer || !bleServer.connected) {
         console.log("Not connected to ESP32, saving locally only");
         errorMessageElement.textContent = "Not connected to ESP32. Settings saved locally.";
         errorMessageElement.style.display = 'block';
-        setupModal.style.display = 'none'; // Close modal
+        setupModal.style.display = 'none';
         updateBluetoothButton();
         return;
       }
 
-      // Optimize JSON payload size
       const dataString = JSON.stringify(settings);
       if (dataString.length > 512) {
         console.error("Settings data too large for BLE:", dataString.length);
         errorMessageElement.textContent = "Settings data too large for Bluetooth.";
         errorMessageElement.style.display = 'block';
-        setupModal.style.display = 'none'; // Close modal
+        setupModal.style.display = 'none';
         return;
       }
 
@@ -721,20 +821,20 @@
         .then(characteristic => characteristic.writeValue(data))
         .then(() => {
           console.log("Settings sent to ESP32:", settings);
-          setupModal.style.display = 'none'; // Close modal
+          setupModal.style.display = 'none';
         })
         .catch(error => {
           console.error("Error sending settings to ESP32:", error);
           errorMessageElement.textContent = "Failed to send settings to ESP32.";
           errorMessageElement.style.display = 'block';
-          setupModal.style.display = 'none'; // Close modal
+          setupModal.style.display = 'none';
           updateBluetoothButton();
         });
     }
 
     // Speed Update
     function updateSpeed(speed) {
-      const displaySpeed = currentUnit === 1 ? speed * 0.621371 : speed; // Convert km/h to mph if unit is 1
+      const displaySpeed = currentUnit === 1 ? speed * 0.621371 : speed;
       speedDisplay.textContent = displaySpeed.toFixed(1);
       const maxSpeed = parseInt(document.getElementById('maxSpeed').value) || 25;
       const displayMaxSpeed = currentUnit === 1 ? maxSpeed * 0.621371 : maxSpeed;
@@ -754,12 +854,15 @@
     }
 
     // Battery and Trip Update
-    function updateDisplay(battery, trip, odo) {
+    function updateDisplay(battery, trip, tripToday, odo) {
       batteryDisplay.textContent = `🔋 ${Math.round(battery)}%`;
-      const displayTrip = currentUnit === 1 ? trip * 0.621371 : trip; // Convert km to miles
-      const displayOdo = currentUnit === 1 ? odo * 0.621371 : odo; // Convert km to miles
+      const displayTrip = currentUnit === 1 ? trip * 0.621371 : trip;
+      const displayTripToday = currentUnit === 1 ? tripToday * 0.621371 : tripToday;
+      const displayOdo = currentUnit === 1 ? odo * 0.621371 : odo;
       tripDisplay.textContent = `${displayTrip.toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      tripTodayDisplay.textContent = `${displayTripToday.toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
       odoDisplay.textContent = `${Math.round(displayOdo)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      saveTripDistances(trip, tripToday);
     }
 
     // BLE Functions
@@ -775,7 +878,6 @@
     async function connectToDevice() {
       if (!isWebBluetoothEnabled()) return;
 
-      // Reset display values
       resetDisplay();
 
       try {
@@ -809,7 +911,6 @@
         await sensorCharacteristicFound.startNotifications();
         updateBluetoothButton();
 
-        // Request assist level from ESP32
         bleServer.getPrimaryService(bleService)
           .then(service => service.getCharacteristic(ledCharacteristic))
           .then(characteristic => characteristic.readValue())
@@ -841,30 +942,33 @@
     }
 
     function handleDataUpdate(data) {
-      const [speed, power, trip, odo, battery] = data.split(':').map(val => parseFloat(val));
-      if (isNaN(speed) || isNaN(power) || isNaN(trip) || isNaN(odo) || isNaN(battery)) {
+      const [speed, power, trip, tripToday, odo, battery] = data.split(':').map(val => parseFloat(val));
+      if (isNaN(speed) || isNaN(power) || isNaN(trip) || isNaN(tripToday) || isNaN(odo) || isNaN(battery)) {
         console.error("Invalid data received:", data);
         return;
       }
       updateSpeed(speed);
       updatePower(power);
-      updateDisplay(battery, trip, odo);
-      console.log(`Updated - Speed: ${speed} km/h, Power: ${power} W, Trip: ${trip} km, Odo: ${odo} km, Battery: ${battery}%`);
+      updateDisplay(battery, trip, tripToday, odo);
+      console.log(`Updated - Speed: ${speed} km/h, Power: ${power} W, Trip: ${trip} km, Trip Today: ${tripToday} km, Odo: ${odo} km, Battery: ${battery}%`);
       isConnected = true;
       updateBluetoothButton();
     }
 
     function resetDisplay() {
-      updateSpeed(0); // Always start at 0
-      updatePower(0); // Always start at 0
+      updateSpeed(0);
+      updatePower(0);
       batteryDisplay.textContent = `🔋 0%`;
-      tripDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
-      odoDisplay.textContent = `1398 ${currentUnit === 1 ? 'miles' : 'km'}`;
+      const trip = parseFloat(localStorage.getItem('tripDistance') || '0.0');
+      const tripToday = parseFloat(localStorage.getItem('tripTodayDistance') || '0.0');
+      const odo = 1398;
+      tripDisplay.textContent = `${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      tripTodayDisplay.textContent = `${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `${(currentUnit === 1 ? odo * 0.621371 : odo).toFixed(0)} ${currentUnit === 1 ? 'miles' : 'km'}`;
       lightState = false;
       lightButton.innerHTML = `<img src="images/grok_image_t6uncz.png" alt="Light Off">`;
       isConnected = false;
       updateBluetoothButton();
-      // Assist level is not reset to preserve the last value
     }
 
     function disconnectDevice() {
@@ -910,11 +1014,8 @@
       }
     }
 
-    // Update clock immediately and every second
     updateClock();
     setInterval(updateClock, 1000);
-
-    // Load settings and assist level on page load
     window.onload = loadSettings;
   </script>
 </body>
