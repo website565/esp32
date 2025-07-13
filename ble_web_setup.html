@@ -650,7 +650,7 @@
     closeModal.addEventListener('click', () => setupModal.style.display = 'none');
     saveSettings.addEventListener('click', saveSettingsToESP32);
     tripDisplay.addEventListener('click', () => {
-      if (confirm("Želite li resetirati TRIP na 0.0?")) {
+      if (confirm("Would you like to reset the TRIP to 0.0?")) {
         resetTrip();
       }
     });
