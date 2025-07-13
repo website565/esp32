@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="hr">
 <head>
@@ -159,15 +158,30 @@
     }
     .bottom-info {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .odo, .trip, .trip-today, .date {
+      text-align: center;
+      font-size: 0.95em; /* Reduced to fit within 420px */
+      margin: 5px 0;
+      width: 100%;
+    }
+    .trip, .trip-today {
+      cursor: pointer; /* Indicate clickability for reset */
+    }
+    .assist-section {
+      display: flex;
+      justify-content: center;
       align-items: center;
       width: 100%;
       margin-top: 10px;
     }
     .assist-minus, .assist-plus {
-      text-align: center;
-      font-size: 1.2em;
       flex: 1;
+      text-align: center;
     }
     .assist-minus button, .assist-plus button {
       background-color: #00ff99;
@@ -181,35 +195,6 @@
     .assist-minus button:hover, .assist-plus button:hover {
       opacity: 0.9;
     }
-    .assist-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex: 1;
-    }
-    .assist-section .odo {
-      text-align: center;
-      font-size: 1.2em;
-      margin: 5px 0;
-    }
-    .assist-section .trip-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      gap: 20px; /* Space between TRIP and TODAY TRIP */
-    }
-    .assist-section .trip, .assist-section .trip-today {
-      text-align: center;
-      font-size: 1.2em;
-      flex: 1; /* Equal width for both */
-      cursor: pointer;
-    }
-    .assist-section .date {
-      text-align: center;
-      font-size: 1em;
-      margin: 5px 0;
-    }
     .assist-circle {
       width: 60px;
       height: 60px;
@@ -220,7 +205,7 @@
       justify-content: center;
       font-size: 1.8em;
       font-weight: bold;
-      margin: 5px 0;
+      margin: 0 20px; /* Space between buttons and circle */
     }
     .modal {
       display: none;
@@ -322,29 +307,18 @@
       </div>
     </div>
     <div class="bottom-info">
-      <div class="assist-minus">
-        <button id="assistMinusButton">−</button>
-      </div>
+      <div class="odo" id="odoDisplay">ODO 1398 km</div>
+      <div class="trip" id="tripDisplay">TRIP 0.0 km</div>
+      <div class="trip-today" id="tripTodayDisplay">TRIP TODAY 0.0 km</div>
+      <div class="date" id="dateDisplay">13.07.2025</div>
       <div class="assist-section">
-        <div class="odo">
-          <div id="odoDisplay">1398 km</div>
-          <div id="odoUnit">ODO</div>
+        <div class="assist-minus">
+          <button id="assistMinusButton">−</button>
         </div>
-        <div class="trip-container">
-          <div class="trip">
-            <div id="tripDisplay">0.0 km</div>
-            <div id="tripUnit">TRIP</div>
-          </div>
-          <div class="trip-today">
-            <div id="tripTodayDisplay">0.0 km</div>
-            <div id="tripTodayUnit">TODAY TRIP</div>
-          </div>
-        </div>
-        <div class="date" id="dateDisplay">2025-07-13</div>
         <div class="assist-circle" id="assistDisplay">0</div>
-      </div>
-      <div class="assist-plus">
-        <button id="assistPlusButton">+</button>
+        <div class="assist-plus">
+          <button id="assistPlusButton">+</button>
+        </div>
       </div>
     </div>
   </div>
@@ -499,12 +473,9 @@
     const powerCircle = document.getElementById("powerCircle");
     const clockDisplay = document.getElementById("clockDisplay");
     const batteryDisplay = document.getElementById("batteryDisplay");
-    const tripDisplay = document.getElementById("tripDisplay");
     const odoDisplay = document.getElementById("odoDisplay");
-    const tripUnit = document.getElementById("tripUnit");
-    const odoUnit = document.getElementById("odoUnit");
+    const tripDisplay = document.getElementById("tripDisplay");
     const tripTodayDisplay = document.getElementById("tripTodayDisplay");
-    const tripTodayUnit = document.getElementById("tripTodayUnit");
     const dateDisplay = document.getElementById("dateDisplay");
 
     // BLE Device Specs
@@ -568,7 +539,7 @@
 
       const savedTrip = localStorage.getItem('tripDistance');
       if (savedTrip !== null) {
-        tripDisplay.textContent = `${parseFloat(savedTrip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+        tripDisplay.textContent = `TRIP ${parseFloat(savedTrip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
         console.log("Trip distance loaded from localStorage:", savedTrip);
       }
 
@@ -576,55 +547,55 @@
       const savedDate = localStorage.getItem('tripTodayDate');
       const today = new Date().toISOString().split('T')[0];
       if (savedTripToday !== null && savedDate === today) {
-        tripTodayDisplay.textContent = `${parseFloat(savedTripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+        tripTodayDisplay.textContent = `TRIP TODAY ${parseFloat(savedTripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
         console.log("Trip today distance loaded from localStorage:", savedTripToday);
       } else {
-        tripTodayDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+        tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
         localStorage.setItem('tripTodayDistance', '0.0');
         localStorage.setItem('tripTodayDate', today);
         console.log("Trip today reset due to new day or no saved date");
         resetTripTodayOnESP32(); // Reset tripTodayDistance on ESP32
       }
 
-      lastDate = today;
       updateDateDisplay();
+      lastDate = today;
       resetDisplay();
     }
 
     // Update unit display based on currentUnit
     function updateUnitDisplay() {
-      if (currentUnit === 1) {
-        speedUnit.textContent = 'mph';
-        tripUnit.textContent = 'TRIP';
-        tripTodayUnit.textContent = 'TODAY TRIP';
-        odoUnit.textContent = 'ODO';
-      } else {
-        speedUnit.textContent = 'km/h';
-        tripUnit.textContent = 'TRIP';
-        tripTodayUnit.textContent = 'TODAY TRIP';
-        odoUnit.textContent = 'ODO';
-      }
-      // Update displayed values with correct units
+      const unit = currentUnit === 1 ? 'miles' : 'km';
+      speedUnit.textContent = currentUnit === 1 ? 'mph' : 'km/h';
       const trip = parseFloat(localStorage.getItem('tripDistance') || '0.0');
       const tripToday = parseFloat(localStorage.getItem('tripTodayDistance') || '0.0');
-      const odo = parseFloat(odoDisplay.textContent) || 1398;
-      tripDisplay.textContent = `${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      tripTodayDisplay.textContent = `${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      odoDisplay.textContent = `${(currentUnit === 1 ? odo * 0.621371 : odo).toFixed(0)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      const odo = parseFloat(odoDisplay.textContent.split(' ')[1]) || 1398;
+      odoDisplay.textContent = `ODO ${Math.round(currentUnit === 1 ? odo * 0.621371 : odo)} ${unit}`;
+      tripDisplay.textContent = `TRIP ${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${unit}`;
+      tripTodayDisplay.textContent = `TRIP TODAY ${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${unit}`;
     }
 
     // Update date display
     function updateDateDisplay() {
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      dateDisplay.textContent = `${day}.${month}.${year}`;
+    }
+
+    // Check date and reset trip today if necessary
+    function checkDateAndResetTripToday() {
       const today = new Date().toISOString().split('T')[0];
-      dateDisplay.textContent = today;
       if (today !== lastDate && lastDate !== null) {
-        tripTodayDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+        const unit = currentUnit === 1 ? 'miles' : 'km';
+        tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${unit}`;
         localStorage.setItem('tripTodayDistance', '0.0');
         localStorage.setItem('tripTodayDate', today);
         console.log("Trip today reset due to new day:", today);
-        resetTripTodayOnESP32(); // Reset tripTodayDistance on ESP32
+        resetTripTodayOnESP32();
       }
       lastDate = today;
+      updateDateDisplay();
     }
 
     // Reset tripTodayDistance on ESP32
@@ -676,19 +647,24 @@
     });
     closeModal.addEventListener('click', () => setupModal.style.display = 'none');
     saveSettings.addEventListener('click', saveSettingsToESP32);
-    tripDisplay.parentElement.addEventListener('click', () => {
+    tripDisplay.addEventListener('click', () => {
       if (confirm("Želite li resetirati TRIP na 0.0?")) {
         resetTrip();
       }
     });
+    tripTodayDisplay.addEventListener('click', () => {
+      if (confirm("Želite li resetirati TRIP TODAY na 0.0?")) {
+        resetTripToday();
+      }
+    });
 
-    // Clock Update
+    // Clock and Date Update
     function updateClock() {
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, "0");
       const minutes = String(now.getMinutes()).padStart(2, "0");
       clockDisplay.textContent = `${hours}:${minutes}`;
-      updateDateDisplay(); // Check for new day
+      checkDateAndResetTripToday(); // Check for new day and update date
     }
 
     // Bluetooth Toggle
@@ -728,7 +704,8 @@
 
     // Reset Trip
     function resetTrip() {
-      tripDisplay.textContent = `0.0 ${currentUnit === 1 ? 'miles' : 'km'}`;
+      const unit = currentUnit === 1 ? 'miles' : 'km';
+      tripDisplay.textContent = `TRIP 0.0 ${unit}`;
       localStorage.setItem('tripDistance', '0.0');
       console.log("Trip distance reset to 0.0");
       if (bleServer && bleServer.connected) {
@@ -741,6 +718,16 @@
           .then(() => console.log("Trip reset command sent to ESP32"))
           .catch(error => console.error("Error sending trip reset to ESP32:", error));
       }
+    }
+
+    // Reset Trip Today
+    function resetTripToday() {
+      const unit = currentUnit === 1 ? 'miles' : 'km';
+      tripTodayDisplay.textContent = `TRIP TODAY 0.0 ${unit}`;
+      localStorage.setItem('tripTodayDistance', '0.0');
+      localStorage.setItem('tripTodayDate', new Date().toISOString().split('T')[0]);
+      console.log("Trip today distance reset to 0.0");
+      resetTripTodayOnESP32();
     }
 
     // Light Toggle
@@ -877,12 +864,13 @@
     // Battery and Trip Update
     function updateDisplay(battery, trip, tripToday, odo) {
       batteryDisplay.textContent = `🔋 ${Math.round(battery)}%`;
+      const unit = currentUnit === 1 ? 'miles' : 'km';
       const displayTrip = currentUnit === 1 ? trip * 0.621371 : trip;
       const displayTripToday = currentUnit === 1 ? tripToday * 0.621371 : tripToday;
       const displayOdo = currentUnit === 1 ? odo * 0.621371 : odo;
-      tripDisplay.textContent = `${displayTrip.toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      tripTodayDisplay.textContent = `${displayTripToday.toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      odoDisplay.textContent = `${Math.round(displayOdo)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `ODO ${Math.round(displayOdo)} ${unit}`;
+      tripDisplay.textContent = `TRIP ${displayTrip.toFixed(1)} ${unit}`;
+      tripTodayDisplay.textContent = `TRIP TODAY ${displayTripToday.toFixed(1)} ${unit}`;
       saveTripDistances(trip, tripToday);
     }
 
@@ -926,7 +914,9 @@
 
         bleServer = await device.gatt.connect();
         isConnected = true;
-        bleServiceFound = await bleServer.getPrimaryService(bleService);
+        bleServiceFound = await ble
+
+Server.getPrimaryService(bleService);
         sensorCharacteristicFound = await bleServiceFound.getCharacteristic(sensorCharacteristic);
         sensorCharacteristicFound.addEventListener('characteristicvaluechanged', handleDataChange);
         await sensorCharacteristicFound.startNotifications();
@@ -980,12 +970,14 @@
       updateSpeed(0);
       updatePower(0);
       batteryDisplay.textContent = `🔋 0%`;
+      const unit = currentUnit === 1 ? 'miles' : 'km';
       const trip = parseFloat(localStorage.getItem('tripDistance') || '0.0');
       const tripToday = parseFloat(localStorage.getItem('tripTodayDistance') || '0.0');
       const odo = 1398;
-      tripDisplay.textContent = `${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      tripTodayDisplay.textContent = `${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${currentUnit === 1 ? 'miles' : 'km'}`;
-      odoDisplay.textContent = `${(currentUnit === 1 ? odo * 0.621371 : odo).toFixed(0)} ${currentUnit === 1 ? 'miles' : 'km'}`;
+      odoDisplay.textContent = `ODO ${Math.round(currentUnit === 1 ? odo * 0.621371 : odo)} ${unit}`;
+      tripDisplay.textContent = `TRIP ${(currentUnit === 1 ? trip * 0.621371 : trip).toFixed(1)} ${unit}`;
+      tripTodayDisplay.textContent = `TRIP TODAY ${(currentUnit === 1 ? tripToday * 0.621371 : tripToday).toFixed(1)} ${unit}`;
+      updateDateDisplay();
       lightState = false;
       lightButton.innerHTML = `<img src="images/grok_image_t6uncz.png" alt="Light Off">`;
       isConnected = false;
