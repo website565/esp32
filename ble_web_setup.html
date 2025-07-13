@@ -736,7 +736,9 @@
     function updateSpeed(speed) {
       const displaySpeed = currentUnit === 1 ? speed * 0.621371 : speed; // Convert km/h to mph if unit is 1
       speedDisplay.textContent = displaySpeed.toFixed(1);
-      const speedPercent = Math.min((displaySpeed / (currentUnit === 1 ? 62 : 100)) * 100, 100);
+      const maxSpeed = parseInt(document.getElementById('maxSpeed').value) || 25;
+      const displayMaxSpeed = currentUnit === 1 ? maxSpeed * 0.621371 : maxSpeed;
+      const speedPercent = Math.min((displaySpeed / displayMaxSpeed) * 100, 100);
       speedCircle.style.background = `conic-gradient(#00ff99 0% ${speedPercent}%, #333 ${speedPercent}% 100%)`;
     }
 
