@@ -318,7 +318,7 @@
   </div>
   <div id="setupModal" class="modal">
     <div class="modal-content">
-      <button class="close-button" id="closeModal">&times;</button>
+      <button class="close-button" id="closeModal">×</button>
       <h2>Setup Parameters</h2>
       <h3>General Settings</h3>
       <label for="maxSpeed">Maximum Trip Speed (km/h):</label>
@@ -366,7 +366,7 @@
       <input type="number" id="p5" min="0" max="40" value="12">
       <h3>C Parameters</h3>
       <label for="c1">C1 (Power-Assist Sensor):</label>
-      <select id="c1">
+      <select id="c3">
         <option value="0">Forward 5/8/10 Signal (Higher/Standard/Highest)</option>
         <option value="1">Forward 5/8/10 Signal (Lower/Standard)</option>
         <option value="2">Forward 5/8/10 Signal (Lowest/Lower)</option>
@@ -379,7 +379,7 @@
         <option value="0">Gear 0</option>
         <option value="1">Gear 1</option>
         <option value="2">Gear 2</option>
-        <option value="3">Gear 3</option>
+        <option value="3">Gear代替
         <option value="4">Gear 4</option>
         <option value="5">Gear 5</option>
         <option value="8" selected>Restore Last Gear</option>
@@ -482,12 +482,47 @@
     let cachedDevice = null;
     let isConnected = false;
 
+    // Load settings from localStorage
+    function loadSettings() {
+      const savedSettings = localStorage.getItem('ebikeSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        document.getElementById('maxSpeed').value = settings.maxSpeed || 25;
+        document.getElementById('wheelDiameter').value = settings.wheelDiameter || '26';
+        document.getElementById('unit').value = settings.unit || '0';
+        document.getElementById('p1').value = settings.p1 || 1;
+        document.getElementById('p2').value = settings.p2 || 1;
+        document.getElementById('p3').value = settings.p3 || '1';
+        document.getElementById('p4').value = settings.p4 || '1';
+        document.getElementById('p5').value = settings.p5 || 12;
+        document.getElementById('c1').value = settings.c1 || '0';
+        document.getElementById('c3').value = settings.c3 || '8';
+        document.getElementById('c4').value = settings.c4 || '0';
+        document.getElementById('c5').value = settings.c5 || 10;
+        document.getElementById('c6').value = settings.c6 || 3;
+        document.getElementById('c7').value = settings.c7 || '1';
+        document.getElementById('c8').value = settings.c8 || '1';
+        document.getElementById('c9').value = settings.c9 || 0;
+        document.getElementById('c10').value = settings.c10 || 'N';
+        document.getElementById('c11').value = settings.c11 || '0';
+        document.getElementById('c12').value = settings.c12 || 4;
+        document.getElementById('c13').value = settings.c13 || 0;
+        document.getElementById('c14').value = settings.c14 || '2';
+        document.getElementById('l1').value = settings.l1 || '0';
+        document.getElementById('l2').value = settings.l2 || '0';
+        document.getElementById('l4').value = settings.l4 || 5;
+      }
+    }
+
     // Button Event Listeners
     bluetoothButton.addEventListener('click', toggleBluetooth);
     assistPlusButton.addEventListener('click', () => changeAssist(1));
     assistMinusButton.addEventListener('click', () => changeAssist(-1));
     lightButton.addEventListener('click', toggleLight);
-    setupButton.addEventListener('click', () => setupModal.style.display = 'flex');
+    setupButton.addEventListener('click', () => {
+      loadSettings();
+      setupModal.style.display = 'flex';
+    });
     closeModal.addEventListener('click', () => setupModal.style.display = 'none');
     saveSettings.addEventListener('click', saveSettingsToESP32);
 
@@ -495,7 +530,9 @@
     function updateClock() {
       const now = new Date();
       const hours = String(now.getHours()).padStart(2, "0");
-      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const minutes
+
+ = String(now.getMinutes()).padStart(2, "0");
       clockDisplay.textContent = `${hours}:${minutes}`;
     }
 
@@ -561,7 +598,7 @@
         });
     }
 
-    // Save Settings to ESP32
+    // Save Settings to localStorage and ESP32
     function saveSettingsToESP32() {
       if (!bleServer || !bleServer.connected) {
         console.log("Not connected to ESP32");
@@ -596,6 +633,10 @@
         l4: parseInt(document.getElementById('l4').value)
       };
 
+      // Save to localStorage
+      localStorage.setItem('ebikeSettings', JSON.stringify(settings));
+
+      // Send to ESP32
       const dataString = JSON.stringify(settings);
       const data = new TextEncoder().encode(dataString);
 
@@ -774,6 +815,9 @@
     // Update clock immediately and every second
     updateClock();
     setInterval(updateClock, 1000);
+
+    // Load settings on page load
+    window.onload = loadSettings;
   </script>
 </body>
 </html>
