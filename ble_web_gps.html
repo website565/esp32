@@ -1141,7 +1141,7 @@
           headers: { 'User-Agent': 'eBikeNav/1.0' }
         });
         if (!response.ok) {
-          throw new Error(`Geocoding HTTP error! Status: ${response.status}`);
+          throw new Error(`Geocoding HTTP error! Status: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
         if (data.length === 0) {
@@ -1157,9 +1157,29 @@
       }
     }
 
+    function calculateDistance(start, end) {
+      // Haversine formula to calculate distance between two points in kilometers
+      const R = 6371; // Earth's radius in km
+      const dLat = (end.lat - start.lat) * Math.PI / 180;
+      const dLon = (end.lon - start.lon) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(start.lat * Math.PI / 180) * Math.cos(end.lat * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+      return distance; // Distance in kilometers
+    }
+
     async function getRoute(start, end) {
       if (!navigator.onLine) {
         alert("No internet connection. Please check your connection and try again.");
+        return null;
+      }
+      // Check approximate distance
+      const distance = calculateDistance(start, end);
+      console.log(`Approximate distance between points: ${distance.toFixed(2)} km`);
+      if (distance > 50) {
+        alert("The destination is too far (>50 km). Please choose a closer destination for better routing performance.");
         return null;
       }
       try {
@@ -1186,7 +1206,7 @@
         if (error.message.includes("429")) {
           errorMessage += "Too many requests to the server. Please try again later.";
         } else if (error.message.includes("No routes found")) {
-          errorMessage += "Try a closer destination or ensure the route is accessible by bicycle.";
+          errorMessage += "No bicycle route available. Try a closer destination or a different address.";
         } else {
           errorMessage += "Check your internet connection or try a different destination.";
         }
