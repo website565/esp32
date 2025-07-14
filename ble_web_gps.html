@@ -1058,11 +1058,12 @@
     // Navigation Functions
     let map, routeLayer, currentPositionMarker, watchId;
 
-    function initMap() {
-      map = L.map('map').setView([45.8150, 15.9819], 13); // Zadana lokacija (npr. Zagreb)
+    function initMap(lat, lon) {
+      map = L.map('map').setView([lat, lon], 15); // Centrira kartu na trenutnu poziciju
       L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
+      currentPositionMarker = L.marker([lat, lon]).addTo(map); // Prikazuje trenutnu poziciju
     }
 
     function updateCurrentPosition(lat, lon) {
@@ -1160,39 +1161,41 @@
       if (watchId) navigator.geolocation.clearWatch(watchId);
     }
 
-    // Initialize map and add navigation event listener
+    // Initialize map with current location and add navigation event listener
     window.onload = function() {
       loadSettings();
-      initMap();
-      document.getElementById('startNavigation').addEventListener('click', async () => {
-        const address = document.getElementById('destination').value;
-        if (!address) {
-          alert('Unesi odredište!');
-          return;
-        }
-        getCurrentPosition(async (start) => {
-          const end = await geocodeAddress(address);
-          if (!end) {
-            alert('Ne mogu pronaći odredište!');
+      getCurrentPosition((pos) => {
+        initMap(pos.lat, pos.lon); // Inicijalizacija karte s trenutnom lokacijom
+        document.getElementById('startNavigation').addEventListener('click', async () => {
+          const address = document.getElementById('destination').value;
+          if (!address) {
+            alert('Unesi odredište!');
             return;
           }
-          const route = await getRoute(start, end);
-          if (route) {
-            displayRoute(route.coordinates);
-            displayInstructions(route.instructions, route.distances, route.bearings);
-            watchPosition((pos) => {
-              updateCurrentPosition(pos.lat, pos.lon);
-              // Ažuriraj upute u stvarnom vremenu
-              getRoute(pos, end).then(newRoute => {
-                if (newRoute) {
-                  displayRoute(newRoute.coordinates);
-                  displayInstructions(newRoute.instructions, newRoute.distances, newRoute.bearings);
-                }
+          getCurrentPosition(async (start) => {
+            const end = await geocodeAddress(address);
+            if (!end) {
+              alert('Ne mogu pronaći odredište!');
+              return;
+            }
+            const route = await getRoute(start, end);
+            if (route) {
+              displayRoute(route.coordinates);
+              displayInstructions(route.instructions, route.distances, route.bearings);
+              watchPosition((pos) => {
+                updateCurrentPosition(pos.lat, pos.lon);
+                // Ažuriraj upute u stvarnom vremenu
+                getRoute(pos, end).then(newRoute => {
+                  if (newRoute) {
+                    displayRoute(newRoute.coordinates);
+                    displayInstructions(newRoute.instructions, newRoute.distances, newRoute.bearings);
+                  }
+                });
               });
-            });
-          } else {
-            alert('Ne mogu izračunati rutu!');
-          }
+            } else {
+              alert('Ne mogu izračunati rutu!');
+            }
+          });
         });
       });
     };
