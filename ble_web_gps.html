@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -286,7 +286,7 @@
     }
     .navigation input {
       padding: 8px;
-      width: 70%;
+      width: 60%;
       background-color: #333;
       color: white;
       border: 1px solid #00ff99;
@@ -296,7 +296,7 @@
       background-color: #00ff99;
       border: none;
       padding: 8px;
-      margin-left: 10px;
+      margin-left: 5px;
       border-radius: 5px;
       cursor: pointer;
     }
@@ -311,6 +311,9 @@
       text-align: center;
       margin: 10px 0;
       font-size: 0.95em;
+    }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
@@ -348,7 +351,7 @@
       <div class="trip" id="tripDisplay">TRIP 0.0 km</div>
       <div class="trip-today" id="tripTodayDisplay">TRIP TODAY 0.0 km</div>
       <div class="odo" id="odoDisplay">ODO 1398 km</div>
-      <div class="date" id="dateDisplay">13.07.2025</div>
+      <div class="date" id="dateDisplay">07.14.2025</div>
       <div class="assist-section">
         <div class="assist-minus">
           <button id="assistMinusButton">−</button>
@@ -360,8 +363,9 @@
       </div>
     </div>
     <div class="navigation">
-      <input type="text" id="destination" placeholder="Unesi odredište (npr. Ulica 123, Grad)">
-      <button id="startNavigation">Započni navigaciju</button>
+      <input type="text" id="destination" placeholder="Enter destination (e.g. 123 Street, City)">
+      <button id="searchButton">Search</button>
+      <button id="startNavigation" class="hidden">Start Navigation</button>
     </div>
     <div id="map"></div>
     <div id="instructions"></div>
@@ -620,7 +624,7 @@
       const day = String(now.getDate()).padStart(2, '0');
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const year = now.getFullYear();
-      dateDisplay.textContent = `${day}.${month}.${year}`;
+      dateDisplay.textContent = `${month}.${day}.${year}`;
     }
 
     // Check date and reset trip today if necessary
@@ -1056,14 +1060,14 @@
     }
 
     // Navigation Functions
-    let map, routeLayer, currentPositionMarker, watchId;
+    let map, routeLayer, currentPositionMarker, watchId, destinationCoords;
 
     function initMap(lat, lon) {
-      map = L.map('map').setView([lat, lon], 15); // Centrira kartu na trenutnu poziciju
+      map = L.map('map').setView([lat, lon], 15); // Center map on current position
       L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
-      currentPositionMarker = L.marker([lat, lon]).addTo(map); // Prikazuje trenutnu poziciju
+      currentPositionMarker = L.marker([lat, lon]).addTo(map); // Show current position
     }
 
     function updateCurrentPosition(lat, lon) {
@@ -1092,16 +1096,16 @@
     function getArrowFromBearing(bearing) {
       if (bearing == null) return '⬆';
       bearing = (bearing + 360) % 360;
-      if (bearing >= 315 || bearing < 45) return '⬆'; // Sjever
-      if (bearing >= 45 && bearing < 135) return '➡'; // Istok
-      if (bearing >= 135 && bearing < 225) return '⬇'; // Jug
-      if (bearing >= 225 && bearing < 315) return '⬅'; // Zapad
+      if (bearing >= 315 || bearing < 45) return '⬆'; // North
+      if (bearing >= 45 && bearing < 135) return '➡'; // East
+      if (bearing >= 135 && bearing < 225) return '⬇'; // South
+      if (bearing >= 225 && bearing < 315) return '⬅'; // West
       return '⬆';
     }
 
     function speakInstruction(text) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'hr-HR';
+      utterance.lang = 'en-US';
       window.speechSynthesis.speak(utterance);
     }
 
@@ -1111,9 +1115,14 @@
           headers: { 'User-Agent': 'eBikeNav/1.0' }
         });
         const data = await response.json();
-        return data.length > 0 ? { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) } : null;
+        if (data.length === 0) {
+          alert('Destination not found. Please check the address.');
+          return null;
+        }
+        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
       } catch (error) {
         console.error("Geocoding error:", error);
+        alert('Error searching for destination. Check your internet connection.');
         return null;
       }
     }
@@ -1131,9 +1140,11 @@
           const bearings = steps.map(step => step.maneuver.bearing_after);
           return { coordinates, instructions, distances, bearings };
         }
+        alert('Unable to calculate route. Try a different destination or check your connection.');
         return null;
       } catch (error) {
         console.error("Routing error:", error);
+        alert('Error calculating route. Check your internet connection.');
         return null;
       }
     }
@@ -1143,7 +1154,7 @@
         (position) => callback({ lat: position.coords.latitude, lon: position.coords.longitude }),
         (error) => {
           console.error("GPS error:", error);
-          alert("Nije moguće dobiti GPS poziciju. Provjeri dozvole.");
+          alert("Unable to get current location. Please enable GPS permissions.");
         },
         { enableHighAccuracy: true }
       );
@@ -1161,39 +1172,44 @@
       if (watchId) navigator.geolocation.clearWatch(watchId);
     }
 
-    // Initialize map with current location and add navigation event listener
+    // Initialize map with current location and add navigation event listeners
     window.onload = function() {
       loadSettings();
       getCurrentPosition((pos) => {
-        initMap(pos.lat, pos.lon); // Inicijalizacija karte s trenutnom lokacijom
-        document.getElementById('startNavigation').addEventListener('click', async () => {
+        initMap(pos.lat, pos.lon); // Initialize map with current location
+        document.getElementById('searchButton').addEventListener('click', async () => {
           const address = document.getElementById('destination').value;
           if (!address) {
-            alert('Unesi odredište!');
+            alert('Please enter a destination!');
+            return;
+          }
+          destinationCoords = await geocodeAddress(address);
+          if (destinationCoords) {
+            document.getElementById('startNavigation').classList.remove('hidden');
+            L.marker([destinationCoords.lat, destinationCoords.lon]).addTo(map); // Show destination marker
+            map.setView([destinationCoords.lat, destinationCoords.lon], 15);
+          }
+        });
+        document.getElementById('startNavigation').addEventListener('click', async () => {
+          if (!destinationCoords) {
+            alert('Please search for a destination first!');
             return;
           }
           getCurrentPosition(async (start) => {
-            const end = await geocodeAddress(address);
-            if (!end) {
-              alert('Ne mogu pronaći odredište!');
-              return;
-            }
-            const route = await getRoute(start, end);
+            const route = await getRoute(start, destinationCoords);
             if (route) {
               displayRoute(route.coordinates);
               displayInstructions(route.instructions, route.distances, route.bearings);
               watchPosition((pos) => {
                 updateCurrentPosition(pos.lat, pos.lon);
-                // Ažuriraj upute u stvarnom vremenu
-                getRoute(pos, end).then(newRoute => {
+                // Update route in real-time
+                getRoute(pos, destinationCoords).then(newRoute => {
                   if (newRoute) {
                     displayRoute(newRoute.coordinates);
                     displayInstructions(newRoute.instructions, newRoute.distances, newRoute.bearings);
                   }
                 });
               });
-            } else {
-              alert('Ne mogu izračunati rutu!');
             }
           });
         });
