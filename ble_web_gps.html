@@ -283,6 +283,8 @@
       align-items: center;
       width: 100%;
       margin: 10px 0;
+      flex-wrap: wrap;
+      gap: 5px;
     }
     .navigation input {
       padding: 8px;
@@ -366,6 +368,7 @@
       <input type="text" id="destination" placeholder="Enter destination (e.g. 123 Street, City)">
       <button id="searchButton">Search</button>
       <button id="startNavigation" class="hidden">Start Navigation</button>
+      <button id="centerMapButton">Center on Current Location</button>
     </div>
     <div id="map"></div>
     <div id="instructions"></div>
@@ -1076,6 +1079,25 @@
       map.setView([lat, lon], 15);
     }
 
+    function centerMapOnCurrentLocation() {
+      if (!navigator.onLine) {
+        alert("No internet connection. Please check your connection and try again.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const pos = { lat: position.coords.latitude, lon: position.coords.longitude };
+          console.log("Centering map on current position:", pos);
+          updateCurrentPosition(pos.lat, pos.lon);
+        },
+        (error) => {
+          console.error("GPS error:", error);
+          alert("Unable to get current location. Please enable GPS permissions and try again.");
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
     function displayRoute(coordinates) {
       if (routeLayer) map.removeLayer(routeLayer);
       routeLayer = L.polyline(coordinates.map(c => [c[1], c[0]]), { color: '#00ff99' }).addTo(map);
@@ -1110,6 +1132,10 @@
     }
 
     async function geocodeAddress(address) {
+      if (!navigator.onLine) {
+        alert("No internet connection. Please check your connection and try again.");
+        return null;
+      }
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, {
           headers: { 'User-Agent': 'eBikeNav/1.0' }
@@ -1122,21 +1148,26 @@
           alert('Destination not found. Please check the address format (e.g., 123 Street, City, Country).');
           return null;
         }
+        console.log("Geocoded address:", address, data[0]);
         return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
       } catch (error) {
         console.error("Geocoding error:", error);
-        alert(`Error searching for destination: ${error.message}. Please try again.`);
+        alert(`Error searching for destination: ${error.message}. Please try again or check your connection.`);
         return null;
       }
     }
 
     async function getRoute(start, end) {
+      if (!navigator.onLine) {
+        alert("No internet connection. Please check your connection and try again.");
+        return null;
+      }
       try {
         const url = `http://router.project-osrm.org/route/v1/bicycle/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson&steps=true`;
         console.log("Sending OSRM request:", url);
         const response = await fetch(url);
         if (!response.ok) {
-          throw new Error(`OSRM HTTP error! Status: ${response.status}`);
+          throw new Error(`OSRM HTTP error! Status: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
         if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
@@ -1147,15 +1178,28 @@
         const instructions = steps.map(step => step.maneuver.instruction);
         const distances = steps.map(step => step.distance);
         const bearings = steps.map(step => step.maneuver.bearing_after);
+        console.log("Route calculated successfully:", { coordinates, instructions });
         return { coordinates, instructions, distances, bearings };
       } catch (error) {
         console.error("Routing error:", error);
-        alert(`Unable to calculate route: ${error.message}. Try a closer destination or check your connection.`);
+        let errorMessage = `Unable to calculate route: ${error.message}. `;
+        if (error.message.includes("429")) {
+          errorMessage += "Too many requests to the server. Please try again later.";
+        } else if (error.message.includes("No routes found")) {
+          errorMessage += "Try a closer destination or ensure the route is accessible by bicycle.";
+        } else {
+          errorMessage += "Check your internet connection or try a different destination.";
+        }
+        alert(errorMessage);
         return null;
       }
     }
 
     function getCurrentPosition(callback) {
+      if (!navigator.onLine) {
+        alert("No internet connection. Please check your connection and try again.");
+        return;
+      }
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const pos = { lat: position.coords.latitude, lon: position.coords.longitude };
@@ -1177,7 +1221,10 @@
           console.log("Updated position:", pos);
           callback(pos);
         },
-        (error) => console.error("GPS watch error:", error),
+        (error) => {
+          console.error("GPS watch error:", error);
+          alert("Unable to track position. Please ensure GPS is enabled.");
+        },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
@@ -1235,6 +1282,7 @@
             }
           });
         });
+        document.getElementById('centerMapButton').addEventListener('click', centerMapOnCurrentLocation);
       });
     };
 
