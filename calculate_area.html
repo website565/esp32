@@ -134,10 +134,7 @@
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         console.log('Geolocation success:', lat, lon);
-        initMap(lat, lon, 14); // Zoom closer for user's location
-        // Add marker for user's location
-        L.marker([lat, lon]).addTo(map)
-          .bindPopup('Your current location').openPopup();
+        initMap(lat, lon, 14); // Zoom closer for user's location, no marker
       },
       (error) => {
         console.error('Geolocation error:', error.message);
@@ -218,9 +215,16 @@
           const currentZoom = map.getZoom(); // Persist current zoom level
           console.log('Finding current position:', lat, lon, 'Zoom:', currentZoom);
           map.setView([lat, lon], currentZoom);
-          // Add temporary marker for current location
-          L.marker([lat, lon]).addTo(map)
-            .bindPopup('Your current location').openPopup();
+          // Update or add single marker for current position
+          if (currentPositionMarker) {
+            currentPositionMarker.setLatLng([lat, lon]);
+            currentPositionMarker.setPopupContent(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+            console.log('Updated existing marker position:', lat, lon);
+          } else {
+            currentPositionMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+            console.log('Created new marker for current position:', lat, lon);
+          }
         },
         (error) => {
           console.error('Geolocation error for finding position:', error.message);
