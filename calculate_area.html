@@ -47,6 +47,7 @@
   <button onclick="toggleLayer()">🗺️ Toggle View</button>
   <button id="pointToggleButton" onclick="togglePointAddition()">📍 Enable Point Addition</button>
   <button onclick="addCurrentPosition()">📍 Add Current Position</button>
+  <button onclick="findCurrentPosition()">📍 Find Current Position</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
 </div>
@@ -188,6 +189,34 @@
         (error) => {
           console.error('Geolocation error for adding point:', error.message);
           alert('Unable to retrieve your location for adding a point.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert('Your browser does not support geolocation.');
+    }
+  }
+
+  // Find current position and re-center map
+  function findCurrentPosition() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          console.log('Finding current position:', lat, lon);
+          map.setView([lat, lon], 14);
+          // Add temporary marker for current location
+          L.marker([lat, lon]).addTo(map)
+            .bindPopup('Your current location').openPopup();
+        },
+        (error) => {
+          console.error('Geolocation error for finding position:', error.message);
+          alert('Unable to retrieve your location.');
         },
         {
           enableHighAccuracy: true,
