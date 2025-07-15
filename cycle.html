@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Map with Bicycle Route</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #map { height: 80vh; }
+    #controls { padding: 10px; font-family: sans-serif; }
+    input[type="text"] {
+      padding: 8px;
+      width: 70%;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 5px 0;
+    }
+    #pointToggleButton.active, #autoUpdateButton.active {
+      background-color: #90EE90; /* Light green when active */
+    }
+    #coordinates {
+      margin-top: 10px;
+      font-family: monospace;
+    }
+    #areaDisplay {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #2e2e2e;
+    }
+    #routeInfo {
+      margin-top: 10px;
+      font-family: sans-serif;
+      color: #2e2e2e;
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+</head>
+<body>
+
+<div id="controls">
+  <input type="text" id="searchInput" placeholder="Enter a city and street (e.g., Zagreb, Trg bana Jelačića)..." />
+  <button onclick="searchLocation()">🔍 Search</button>
+  <br>
+  <button onclick="calculateArea()">📏 Calculate Area</button>
+  <button onclick="removeLastPoint()">❌ Remove Last Point</button>
+  <button onclick="clearAll()">🧹 Clear All</button>
+  <button onclick="toggleLayer()">🗺️ Toggle View</button>
+  <button id="pointToggleButton" onclick="togglePointAddition()">📍 Enable Point Addition</button>
+  <button onclick="addCurrentPosition()">📍 Add Current Position</button>
+  <button onclick="findCurrentPosition()">📍 Find Current Position</button>
+  <button id="autoUpdateButton" onclick="toggleAutoUpdate()">📍 Enable Auto-Update Position</button>
+  <button onclick="calculateBikeRoute()">🚲 Calculate Bike Route</button>
+  <div id="coordinates"></div>
+  <div id="areaDisplay"></div>
+  <div id="routeInfo"></div>
+</div>
+
+<div id="map"></div>
+
+<script>
+  let map;
+  let clickedPoints = [];
+  let pointMarkers = [];
+  let polygonLayer = null;
+  let currentLayer;
+  let streetLayer, satelliteLayer;
+  let pointAdditionEnabled = false;
+  let autoUpdateEnabled = false;
+  let watchId = null;
+  let currentPositionMarker = null;
+  let bikeRouteControl = null;
+
+  // Initialize map with given coordinates and zoom level
+  function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
+    try {
+      console.log('Initializing map at:', lat, lon, 'Zoom:', zoom);
+      map = L.map('map').setView([lat, lon], zoom);
+
+      // Define tile layers
+      streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).on('tileerror', function(error, tile) {
+        console.error('Street layer tile error:', error, tile);
+      });
+
+      satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© Esri'
+      }).on('tileerror', function(error, tile) {
+        console.error('Satellite layer tile error:', error, tile);
+      });
+
+      currentLayer = satelliteLayer;
+      currentLayer.addTo(map);
+      console.log('Initial layer set to satellite');
+
+      // Handle map click to add markers (only if point addition is enabled)
+      map.on('click', function(e) {
+        if (!pointAdditionEnabled) return;
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+
+        const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+          .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+
+        pointMarkers.push(marker);
+        clickedPoints.push([lon, lat]);
+
+        updateCoordinateList();
+        redrawPolygon();
+
+        // Update coordinates on marker drag
+        marker.on('dragend', function(e) {
+          const newLatLng = e.target.getLatLng();
+          const index = pointMarkers.indexOf(marker);
+          if (index !== -1) {
+            clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+            updateCoordinateList();
+            redrawPolygon();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      alert('Error initializing map: ' + error.message);
+    }
+  }
+
+  // Get user's location and initialize map
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        console.log('Geolocation success:', lat, lon);
+        initMap(lat, lon, 14); // Zoom closer for user's location, no marker
+      },
+      (error) => {
+        console.error('Geolocation error:', error.message);
+        alert('Unable to retrieve your location. Using default coordinates.');
+        initMap(); // Fallback to default coordinates
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    alert('Your browser does not support geolocation. Using default coordinates.');
+    initMap(); // Fallback to default coordinates
+  }
+
+  // Toggle point addition on/off
+  function togglePointAddition() {
+    pointAdditionEnabled = !pointAdditionEnabled;
+    const button = document.getElementById('pointToggleButton');
+    button.textContent = pointAdditionEnabled ? '📍 Disable Point Addition' : '📍 Enable Point Addition';
+    button.classList.toggle('active', pointAdditionEnabled);
+    console.log('Point addition:', pointAdditionEnabled ? 'enabled' : 'disabled');
+  }
+
+  // Add current position as a point
+  function addCurrentPosition() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          console.log('Adding current position as point:', lat, lon);
+
+          const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+            .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+
+          pointMarkers.push(marker);
+          clickedPoints.push([lon, lat]);
+
+          updateCoordinateList();
+          redrawPolygon();
+
+          // Update coordinates on marker drag
+          marker.on('dragend', function(e) {
+            const newLatLng = e.target.getLatLng();
+            const index = pointMarkers.indexOf(marker);
+            if (index !== -1) {
+              clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+              updateCoordinateList();
+              redrawPolygon();
+            }
+          });
+        },
+        (error) => {
+          console.error('Geolocation error for adding point:', error.message);
+          alert('Unable to retrieve your location for adding a point.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert('Your browser does not support geolocation.');
+    }
+  }
+
+  // Find current position and re-center map
+  function findCurrentPosition() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const currentZoom = map.getZoom(); // Persist current zoom level
+          console.log('Finding current position:', lat, lon, 'Zoom:', currentZoom);
+          map.setView([lat, lon], currentZoom);
+          // Update or add single marker for current position
+          if (currentPositionMarker) {
+            currentPositionMarker.setLatLng([lat, lon]);
+            currentPositionMarker.setPopupContent(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+            console.log('Updated existing marker position:', lat, lon);
+          } else {
+            currentPositionMarker = L.marker([lat, lon]).addTo(map)
+              .bindPopup(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+            console.log('Created new marker for current position:', lat, lon);
+          }
+        },
+        (error) => {
+          console.error('Geolocation error for finding position:', error.message);
+          alert('Unable to retrieve your location.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert('Your browser does not support geolocation.');
+    }
+  }
+
+  // Toggle auto-update position
+  function toggleAutoUpdate() {
+    autoUpdateEnabled = !autoUpdateEnabled;
+    const button = document.getElementById('autoUpdateButton');
+    button.textContent = autoUpdateEnabled ? '📍 Disable Auto-Update Position' : '📍 Enable Auto-Update Position';
+    button.classList.toggle('active', autoUpdateEnabled);
+    console.log('Auto-update position:', autoUpdateEnabled ? 'enabled' : 'disabled');
+
+    if (autoUpdateEnabled) {
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const currentZoom = map.getZoom(); // Persist current zoom level
+            console.log('Auto-updating position:', lat, lon, 'Zoom:', currentZoom);
+            map.setView([lat, lon], currentZoom);
+            // Update or add single marker for current position
+            if (currentPositionMarker) {
+              currentPositionMarker.setLatLng([lat, lon]);
+              currentPositionMarker.setPopupContent(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+              console.log('Updated existing marker position:', lat, lon);
+            } else {
+              currentPositionMarker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+              console.log('Created new marker for current position:', lat, lon);
+            }
+            // Update route if active
+            if (bikeRouteControl) {
+              updateBikeRoute();
+            }
+          },
+          (error) => {
+            console.error('Geolocation error for auto-update:', error.message);
+            alert('Unable to retrieve your location for auto-update.');
+            autoUpdateEnabled = false;
+            button.textContent = '📍 Enable Auto-Update Position';
+            button.classList.remove('active');
+            if (watchId !== null) {
+              navigator.geolocation.clearWatch(watchId);
+              watchId = null;
+            }
+            if (currentPositionMarker) {
+              map.removeLayer(currentPositionMarker);
+              currentPositionMarker = null;
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        alert('Your browser does not support geolocation.');
+        autoUpdateEnabled = false;
+        button.textContent = '📍 Enable Auto-Update Position';
+        button.classList.remove('active');
+      }
+    } else {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (currentPositionMarker) {
+        map.removeLayer(currentPositionMarker);
+        currentPositionMarker = null;
+      }
+    }
+  }
+
+  // Calculate bike route
+  let lastDestination = null; // Store last searched destination
+  function calculateBikeRoute() {
+    if (!lastDestination) {
+      alert('Please search for a destination first.');
+      return;
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const startLat = position.coords.latitude;
+          const startLon = position.coords.longitude;
+          const endLat = lastDestination.lat;
+          const endLon = lastDestination.lon;
+          console.log('Calculating bike route from:', startLat, startLon, 'to:', endLat, endLon);
+
+          // Remove previous route if exists
+          if (bikeRouteControl) {
+            map.removeControl(bikeRouteControl);
+            bikeRouteControl = null;
+          }
+
+          // Add new route
+          bikeRouteControl = L.Routing.control({
+            waypoints: [
+              L.latLng(startLat, startLon),
+              L.latLng(endLat, endLon)
+            ],
+            router: L.Routing.graphhopper('YOUR_GRAPHHOPPER_API_KEY', { vehicle: 'bike' }),
+            lineOptions: {
+              styles: [{ color: 'green', opacity: 0.7, weight: 5 }]
+            },
+            addWaypoints: false,
+            fitSelectedRoutes: true,
+            show: true,
+            routeWhileDragging: false
+          }).addTo(map);
+
+          // Display route info
+          bikeRouteControl.on('routesfound', function(e) {
+            const route = e.routes[0];
+            const distance = (route.summary.totalDistance / 1000).toFixed(2); // km
+            const time = (route.summary.totalTime / 60).toFixed(0); // minutes
+            document.getElementById('routeInfo').innerHTML = `Bike route to ${lastDestination.display_name}: ${distance} km, ~${time} min`;
+            console.log('Route calculated:', distance, 'km,', time, 'min');
+          });
+        },
+        (error) => {
+          console.error('Geolocation error for bike route:', error.message);
+          alert('Unable to retrieve your location for bike route.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert('Your browser does not support geolocation.');
+    }
+  }
+
+  // Update bike route when position changes
+  function updateBikeRoute() {
+    if (!bikeRouteControl || !lastDestination || !currentPositionMarker) return;
+    const startLat = currentPositionMarker.getLatLng().lat;
+    const startLon = currentPositionMarker.getLatLng().lng;
+    const endLat = lastDestination.lat;
+    const endLon = lastDestination.lon;
+    console.log('Updating bike route from:', startLat, startLon, 'to:', endLat, endLon);
+
+    bikeRouteControl.setWaypoints([
+      L.latLng(startLat, startLon),
+      L.latLng(endLat, endLon)
+    ]);
+  }
+
+  // Update the list of coordinates
+  function updateCoordinateList() {
+    const div = document.getElementById('coordinates');
+    if (clickedPoints.length === 0) {
+      div.innerHTML = '<em>No points.</em>';
+      document.getElementById('areaDisplay').innerHTML = '';
+      return;
+    }
+    div.innerHTML = `<strong>Points:</strong><br>` +
+      clickedPoints.map((p, i) =>
+        `📍 ${i + 1}: Lat: <strong>${p[1].toFixed(6)}</strong>, Lon: <strong>${p[0].toFixed(6)}</strong><br>`
+      ).join('');
+  }
+
+  // Redraw the polygon and update area
+  function redrawPolygon() {
+    if (polygonLayer) {
+      map.removeLayer(polygonLayer);
+      polygonLayer = null;
+    }
+    if (clickedPoints.length >= 3) {
+      const closed = [...clickedPoints, clickedPoints[0]];
+      polygonLayer = L.polygon(closed.map(p => [p[1], p[0]]), {
+        color: 'blue',
+        fillOpacity: 0.2
+      }).addTo(map);
+      calculateAndDisplayArea();
+    } else {
+      document.getElementById('areaDisplay').innerHTML = '';
+    }
+  }
+
+  // Calculate and display the area
+  function calculateAndDisplayArea() {
+    if (clickedPoints.length < 3) {
+      document.getElementById('areaDisplay').innerHTML = '';
+      return;
+    }
+    const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
+    const area = turf.area(polygon);
+    const hectares = (area / 10000).toFixed(2);
+    document.getElementById('areaDisplay').innerHTML = `Area: ${hectares} ha (${area.toFixed(0)} m²)`;
+  }
+
+  // Calculate area and show in alert
+  function calculateArea() {
+    if (clickedPoints.length < 3) {
+      alert('Add at least 3 points to calculate the area.');
+      return;
+    }
+    const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
+    const area = turf.area(polygon);
+    const hectares = (area / 10000).toFixed(2);
+    alert(`Area: ${hectares} ha (${area.toFixed(0)} m²)`);
+  }
+
+  // Remove the last point
+  function removeLastPoint() {
+    if (pointMarkers.length === 0) return;
+    const marker = pointMarkers.pop();
+    map.removeLayer(marker);
+    clickedPoints.pop();
+    updateCoordinateList();
+    redrawPolygon();
+  }
+
+  // Clear all points and polygon
+  function clearAll() {
+    pointMarkers.forEach(m => map.removeLayer(m));
+    pointMarkers = [];
+    clickedPoints = [];
+    if (polygonLayer) {
+      map.removeLayer(polygonLayer);
+      polygonLayer = null;
+    }
+    if (bikeRouteControl) {
+      map.removeControl(bikeRouteControl);
+      bikeRouteControl = null;
+      lastDestination = null;
+      document.getElementById('routeInfo').innerHTML = '';
+    }
+    updateCoordinateList();
+    document.getElementById('areaDisplay').innerHTML = '';
+  }
+
+  // Toggle between street and satellite layers
+  function toggleLayer() {
+    console.log('Toggling layer. Current layer:', currentLayer === streetLayer ? 'street' : 'satellite');
+    try {
+      map.removeLayer(currentLayer);
+      currentLayer = (currentLayer === streetLayer) ? satelliteLayer : streetLayer;
+      currentLayer.addTo(map);
+      console.log('Switched to layer:', currentLayer === streetLayer ? 'street' : 'satellite');
+    } catch (error) {
+      console.error('Error toggling layer:', error);
+      alert('Error switching map view: ' + error.message);
+    }
+  }
+
+  // Search for a location
+  function searchLocation() {
+    const query = document.getElementById('searchInput').value;
+    if (!query) return;
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`, {
+      headers: {
+        'User-Agent': 'MyMapApp/1.0 (contact: your-email@example.com)'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          lastDestination = { lat, lon, display_name: data[0].display_name };
+          map.setView([lat, lon], 14);
+          const marker = L.marker([lat, lon]).addTo(map);
+          marker.bindPopup(`Search result: ${query}`).openPopup();
+          console.log('Search result:', lat, lon, lastDestination.display_name);
+        } else {
+          alert('Location not found.');
+        }
+      })
+      .catch(error => {
+        console.error('Geocoding error:', error);
+        alert('Error during search: ' + error.message);
+      });
+  }
+</script>
+
+</body>
+</html>
