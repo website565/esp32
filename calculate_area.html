@@ -2,12 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map with Search</title>
+  <title>Map with Save/Load Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #map { height: 80vh; }
     #controls { padding: 10px; font-family: sans-serif; }
-    input[type="text"] {
+    input[type="text"], select {
       padding: 8px;
       width: 70%;
       font-size: 16px;
@@ -18,11 +18,8 @@
       font-size: 16px;
       margin: 5px 0;
     }
-    #pointToggleButton.active {
-      background-color: #90EE90; /* Light green when point addition is enabled */
-    }
-    #autoUpdateButton.active {
-      background-color: #90EE90; /* Light green when auto-update is enabled */
+    #pointToggleButton.active, #autoUpdateButton.active {
+      background-color: #90EE90; /* Light green when active */
     }
     #coordinates {
       margin-top: 10px;
@@ -43,6 +40,14 @@
 <div id="controls">
   <input type="text" id="searchInput" placeholder="Enter a place or city..." />
   <button onclick="searchLocation()">🔍 Search</button>
+  <br>
+  <input type="text" id="placeNameInput" placeholder="Enter place name (e.g., My House)..." />
+  <button onclick="savePlace()">💾 Save Place</button>
+  <br>
+  <select id="savedPlacesSelect">
+    <option value="">Select a saved place...</option>
+  </select>
+  <button onclick="loadPlace()">📂 Load Place</button>
   <br>
   <button onclick="calculateArea()">📏 Calculate Area</button>
   <button onclick="removeLastPoint()">❌ Remove Last Point</button>
@@ -121,6 +126,9 @@
           }
         });
       });
+
+      // Populate saved places dropdown
+      updateSavedPlacesDropdown();
     } catch (error) {
       console.error('Map initialization error:', error);
       alert('Error initializing map: ' + error.message);
@@ -308,6 +316,108 @@
     }
   }
 
+  // Save place to localStorage
+  function savePlace() {
+    const placeName = document.getElementById('placeNameInput').value.trim();
+    if (!placeName) {
+      alert('Please enter a place name.');
+      return;
+    }
+    if (clickedPoints.length < 3) {
+      alert('Add at least 3 points to save the place.');
+      return;
+    }
+
+    const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
+    const area = turf.area(polygon);
+    const hectares = (area / 10000).toFixed(2);
+
+    const place = {
+      name: placeName,
+      points: clickedPoints,
+      area: { hectares, squareMeters: area.toFixed(0) }
+    };
+
+    let savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+    savedPlaces = savedPlaces.filter(p => p.name !== placeName); // Overwrite if name exists
+    savedPlaces.push(place);
+    localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces));
+
+    console.log('Saved place:', placeName, 'Points:', clickedPoints, 'Area:', hectares, 'ha');
+    alert(`Place "${placeName}" saved successfully!`);
+    updateSavedPlacesDropdown();
+  }
+
+  // Load place from localStorage
+  function loadPlace() {
+    const select = document.getElementById('savedPlacesSelect');
+    const placeName = select.value;
+    if (!placeName) {
+      alert('Please select a place to load.');
+      return;
+    }
+
+    const savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+    const place = savedPlaces.find(p => p.name === placeName);
+    if (!place) {
+      alert('Place not found.');
+      return;
+    }
+
+    // Clear current points and polygon
+    pointMarkers.forEach(m => map.removeLayer(m));
+    pointMarkers = [];
+    clickedPoints = [];
+    if (polygonLayer) {
+      map.removeLayer(polygonLayer);
+      polygonLayer = null;
+    }
+
+    // Load points and markers
+    clickedPoints = place.points;
+    clickedPoints.forEach(([lon, lat]) => {
+      const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+      pointMarkers.push(marker);
+
+      // Update coordinates on marker drag
+      marker.on('dragend', function(e) {
+        const newLatLng = e.target.getLatLng();
+        const index = pointMarkers.indexOf(marker);
+        if (index !== -1) {
+          clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+          updateCoordinateList();
+          redrawPolygon();
+        }
+      });
+    });
+
+    // Redraw polygon and display area
+    updateCoordinateList();
+    redrawPolygon();
+    document.getElementById('areaDisplay').innerHTML = `Area: ${place.area.hectares} ha (${place.area.squareMeters} m²)`;
+    console.log('Loaded place:', placeName, 'Points:', clickedPoints, 'Area:', place.area.hectares, 'ha');
+
+    // Center map on the first point
+    if (clickedPoints.length > 0) {
+      map.setView([clickedPoints[0][1], clickedPoints[0][0]], map.getZoom());
+    }
+  }
+
+  // Update saved places dropdown
+  function updateSavedPlacesDropdown() {
+    const select = document.getElementById('savedPlacesSelect');
+    select.innerHTML = '<option value="">Select a saved place...</option>';
+    const savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+    savedPlaces.forEach(place => {
+      const option = document.createElement('option');
+      option.value = place.name;
+      option.textContent = place.name;
+      select.appendChild(option);
+    });
+    console.log('Updated saved places dropdown:', savedPlaces.map(p => p.name));
+  }
+
   // Update the list of coordinates
   function updateCoordinateList() {
     const div = document.getElementById('coordinates');
@@ -418,6 +528,7 @@
           map.setView([lat, lon], 14);
           const marker = L.marker([lat, lon]).addTo(map);
           marker.bindPopup(`Search result: ${query}`).openPopup();
+          console.log('Search result:', lat, lon, data[0].display_name);
         } else {
           alert('Location not found.');
         }
