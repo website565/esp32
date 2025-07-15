@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map with Save/Load/Delete Places</title>
+  <title>Map with Save/Load/Delete/Update Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #map { height: 80vh; }
@@ -49,6 +49,7 @@
   </select>
   <button onclick="loadPlace()">📂 Load Place</button>
   <button onclick="deletePlace()">🗑️ Delete Place</button>
+  <button onclick="updatePlace()">🔄 Update Place</button>
   <br>
   <button onclick="calculateArea()">📏 Calculate Area</button>
   <button onclick="removeLastPoint()">❌ Remove Last Point</button>
@@ -75,6 +76,7 @@
   let autoUpdateEnabled = false;
   let watchId = null;
   let currentPositionMarker = null;
+  let currentPlaceName = null; // Track currently loaded place
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
@@ -397,12 +399,46 @@
     updateCoordinateList();
     redrawPolygon();
     document.getElementById('areaDisplay').innerHTML = `Area: ${place.area.hectares} ha (${place.area.squareMeters} m²)`;
+    currentPlaceName = placeName; // Track loaded place
     console.log('Loaded place:', placeName, 'Points:', clickedPoints, 'Area:', place.area.hectares, 'ha');
 
     // Center map on the first point
     if (clickedPoints.length > 0) {
       map.setView([clickedPoints[0][1], clickedPoints[0][0]], map.getZoom());
     }
+  }
+
+  // Update place in localStorage
+  function updatePlace() {
+    if (!currentPlaceName) {
+      alert('No place is currently loaded. Please load a place first.');
+      return;
+    }
+    if (clickedPoints.length < 3) {
+      alert('Add at least 3 points to update the place.');
+      return;
+    }
+
+    const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
+    const area = turf.area(polygon);
+    const hectares = (area / 10000).toFixed(2);
+
+    let savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+    const placeIndex = savedPlaces.findIndex(p => p.name === currentPlaceName);
+    if (placeIndex === -1) {
+      alert('Place not found in storage.');
+      return;
+    }
+
+    savedPlaces[placeIndex] = {
+      name: currentPlaceName,
+      points: clickedPoints,
+      area: { hectares, squareMeters: area.toFixed(0) }
+    };
+
+    localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces));
+    console.log('Updated place:', currentPlaceName, 'Points:', clickedPoints, 'Area:', hectares, 'ha');
+    alert(`Place "${currentPlaceName}" updated successfully!`);
   }
 
   // Delete place from localStorage
@@ -423,6 +459,9 @@
 
     savedPlaces = savedPlaces.filter(p => p.name !== placeName);
     localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces));
+    if (currentPlaceName === placeName) {
+      currentPlaceName = null; // Clear if deleting the loaded place
+    }
     console.log('Deleted place:', placeName);
     alert(`Place "${placeName}" deleted successfully!`);
     updateSavedPlacesDropdown();
@@ -517,6 +556,7 @@
       map.removeLayer(polygonLayer);
       polygonLayer = null;
     }
+    currentPlaceName = null; // Clear loaded place
     updateCoordinateList();
     document.getElementById('areaDisplay').innerHTML = '';
   }
