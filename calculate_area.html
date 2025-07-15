@@ -54,49 +54,62 @@
   let pointMarkers = [];
   let polygonLayer = null;
   let currentLayer;
+  let streetLayer, satelliteLayer;
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
-    map = L.map('map').setView([lat, lon], zoom);
+    try {
+      console.log('Initializing map at:', lat, lon, 'Zoom:', zoom);
+      map = L.map('map').setView([lat, lon], zoom);
 
-    const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    });
-
-    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 19,
-      attribution: '© Esri'
-    });
-
-    currentLayer = satelliteLayer;
-    currentLayer.addTo(map);
-
-    // Handle map click to add markers
-    map.on('click', function(e) {
-      const lat = e.latlng.lat;
-      const lon = e.latlng.lng;
-
-      const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
-        .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
-
-      pointMarkers.push(marker);
-      clickedPoints.push([lon, lat]);
-
-      updateCoordinateList();
-      redrawPolygon();
-
-      // Update coordinates on marker drag
-      marker.on('dragend', function(e) {
-        const newLatLng = e.target.getLatLng();
-        const index = pointMarkers.indexOf(marker);
-        if (index !== -1) {
-          clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
-          updateCoordinateList();
-          redrawPolygon();
-        }
+      // Define tile layers
+      streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).on('tileerror', function(error, tile) {
+        console.error('Street layer tile error:', error, tile);
       });
-    });
+
+      satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© Esri'
+      }).on('tileerror', function(error, tile) {
+        console.error('Satellite layer tile error:', error, tile);
+      });
+
+      currentLayer = satelliteLayer;
+      currentLayer.addTo(map);
+      console.log('Initial layer set to satellite');
+
+      // Handle map click to add markers
+      map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+
+        const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+          .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+
+        pointMarkers.push(marker);
+        clickedPoints.push([lon, lat]);
+
+        updateCoordinateList();
+        redrawPolygon();
+
+        // Update coordinates on marker drag
+        marker.on('dragend', function(e) {
+          const newLatLng = e.target.getLatLng();
+          const index = pointMarkers.indexOf(marker);
+          if (index !== -1) {
+            clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+            updateCoordinateList();
+            redrawPolygon();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      alert('Error initializing map: ' + error.message);
+    }
   }
 
   // Get user's location and initialize map
@@ -105,14 +118,15 @@
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+        console.log('Geolocation success:', lat, lon);
         initMap(lat, lon, 14); // Zoom closer for user's location
         // Add marker for user's location
         L.marker([lat, lon]).addTo(map)
           .bindPopup('Your current location').openPopup();
       },
       (error) => {
-        console.error("Geolocation error:", error.message);
-        alert("Unable to retrieve your location. Using default coordinates.");
+        console.error('Geolocation error:', error.message);
+        alert('Unable to retrieve your location. Using default coordinates.');
         initMap(); // Fallback to default coordinates
       },
       {
@@ -122,7 +136,7 @@
       }
     );
   } else {
-    alert("Your browser does not support geolocation. Using default coordinates.");
+    alert('Your browser does not support geolocation. Using default coordinates.');
     initMap(); // Fallback to default coordinates
   }
 
@@ -130,14 +144,14 @@
   function updateCoordinateList() {
     const div = document.getElementById('coordinates');
     if (clickedPoints.length === 0) {
-      div.innerHTML = "<em>No points.</em>";
-      document.getElementById('areaDisplay').innerHTML = "";
+      div.innerHTML = '<em>No points.</em>';
+      document.getElementById('areaDisplay').innerHTML = '';
       return;
     }
     div.innerHTML = `<strong>Points:</strong><br>` +
       clickedPoints.map((p, i) =>
         `📍 ${i + 1}: Lat: <strong>${p[1].toFixed(6)}</strong>, Lon: <strong>${p[0].toFixed(6)}</strong><br>`
-      ).join("");
+      ).join('');
   }
 
   // Redraw the polygon and update area
@@ -154,14 +168,14 @@
       }).addTo(map);
       calculateAndDisplayArea();
     } else {
-      document.getElementById('areaDisplay').innerHTML = "";
+      document.getElementById('areaDisplay').innerHTML = '';
     }
   }
 
   // Calculate and display the area
   function calculateAndDisplayArea() {
     if (clickedPoints.length < 3) {
-      document.getElementById('areaDisplay').innerHTML = "";
+      document.getElementById('areaDisplay').innerHTML = '';
       return;
     }
     const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
@@ -173,7 +187,7 @@
   // Calculate area and show in alert
   function calculateArea() {
     if (clickedPoints.length < 3) {
-      alert("Add at least 3 points to calculate the area.");
+      alert('Add at least 3 points to calculate the area.');
       return;
     }
     const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
@@ -202,19 +216,26 @@
       polygonLayer = null;
     }
     updateCoordinateList();
-    document.getElementById('areaDisplay').innerHTML = "";
+    document.getElementById('areaDisplay').innerHTML = '';
   }
 
   // Toggle between street and satellite layers
   function toggleLayer() {
-    map.removeLayer(currentLayer);
-    currentLayer = (currentLayer === streetLayer) ? satelliteLayer : streetLayer;
-    map.addLayer(currentLayer);
+    console.log('Toggling layer. Current layer:', currentLayer === streetLayer ? 'street' : 'satellite');
+    try {
+      map.removeLayer(currentLayer);
+      currentLayer = (currentLayer === streetLayer) ? satelliteLayer : streetLayer;
+      currentLayer.addTo(map);
+      console.log('Switched to layer:', currentLayer === streetLayer ? 'street' : 'satellite');
+    } catch (error) {
+      console.error('Error toggling layer:', error);
+      alert('Error switching map view: ' + error.message);
+    }
   }
 
   // Search for a location
   function searchLocation() {
-    const query = document.getElementById("searchInput").value;
+    const query = document.getElementById('searchInput').value;
     if (!query) return;
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`, {
       headers: {
@@ -230,12 +251,12 @@
           const marker = L.marker([lat, lon]).addTo(map);
           marker.bindPopup(`Search result: ${query}`).openPopup();
         } else {
-          alert("Location not found.");
+          alert('Location not found.');
         }
       })
       .catch(error => {
-        console.error("Geocoding error:", error);
-        alert("Error during search: " + error.message);
+        console.error('Geocoding error:', error);
+        alert('Error during search: ' + error.message);
       });
   }
 </script>
