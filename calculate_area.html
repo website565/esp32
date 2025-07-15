@@ -18,6 +18,9 @@
       font-size: 16px;
       margin: 5px 0;
     }
+    #pointToggleButton.active {
+      background-color: #90EE90; /* Light green when point addition is enabled */
+    }
     #coordinates {
       margin-top: 10px;
       font-family: monospace;
@@ -42,6 +45,8 @@
   <button onclick="removeLastPoint()">❌ Remove Last Point</button>
   <button onclick="clearAll()">🧹 Clear All</button>
   <button onclick="toggleLayer()">🗺️ Toggle View</button>
+  <button id="pointToggleButton" onclick="togglePointAddition()">📍 Enable Point Addition</button>
+  <button onclick="addCurrentPosition()">📍 Add Current Position</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
 </div>
@@ -55,6 +60,7 @@
   let polygonLayer = null;
   let currentLayer;
   let streetLayer, satelliteLayer;
+  let pointAdditionEnabled = false;
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
@@ -81,8 +87,9 @@
       currentLayer.addTo(map);
       console.log('Initial layer set to satellite');
 
-      // Handle map click to add markers
+      // Handle map click to add markers (only if point addition is enabled)
       map.on('click', function(e) {
+        if (!pointAdditionEnabled) return;
         const lat = e.latlng.lat;
         const lon = e.latlng.lng;
 
@@ -138,6 +145,59 @@
   } else {
     alert('Your browser does not support geolocation. Using default coordinates.');
     initMap(); // Fallback to default coordinates
+  }
+
+  // Toggle point addition on/off
+  function togglePointAddition() {
+    pointAdditionEnabled = !pointAdditionEnabled;
+    const button = document.getElementById('pointToggleButton');
+    button.textContent = pointAdditionEnabled ? '📍 Disable Point Addition' : '📍 Enable Point Addition';
+    button.classList.toggle('active', pointAdditionEnabled);
+    console.log('Point addition:', pointAdditionEnabled ? 'enabled' : 'disabled');
+  }
+
+  // Add current position as a point
+  function addCurrentPosition() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          console.log('Adding current position as point:', lat, lon);
+
+          const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+            .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+
+          pointMarkers.push(marker);
+          clickedPoints.push([lon, lat]);
+
+          updateCoordinateList();
+          redrawPolygon();
+
+          // Update coordinates on marker drag
+          marker.on('dragend', function(e) {
+            const newLatLng = e.target.getLatLng();
+            const index = pointMarkers.indexOf(marker);
+            if (index !== -1) {
+              clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+              updateCoordinateList();
+              redrawPolygon();
+            }
+          });
+        },
+        (error) => {
+          console.error('Geolocation error for adding point:', error.message);
+          alert('Unable to retrieve your location for adding a point.');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      alert('Your browser does not support geolocation.');
+    }
   }
 
   // Update the list of coordinates
