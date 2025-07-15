@@ -21,6 +21,9 @@
     #pointToggleButton.active {
       background-color: #90EE90; /* Light green when point addition is enabled */
     }
+    #autoUpdateButton.active {
+      background-color: #90EE90; /* Light green when auto-update is enabled */
+    }
     #coordinates {
       margin-top: 10px;
       font-family: monospace;
@@ -48,6 +51,7 @@
   <button id="pointToggleButton" onclick="togglePointAddition()">📍 Enable Point Addition</button>
   <button onclick="addCurrentPosition()">📍 Add Current Position</button>
   <button onclick="findCurrentPosition()">📍 Find Current Position</button>
+  <button id="autoUpdateButton" onclick="toggleAutoUpdate()">📍 Enable Auto-Update Position</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
 </div>
@@ -62,6 +66,9 @@
   let currentLayer;
   let streetLayer, satelliteLayer;
   let pointAdditionEnabled = false;
+  let autoUpdateEnabled = false;
+  let watchId = null;
+  let currentPositionMarker = null;
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
@@ -208,8 +215,9 @@
         (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-          console.log('Finding current position:', lat, lon);
-          map.setView([lat, lon], 14);
+          const currentZoom = map.getZoom(); // Persist current zoom level
+          console.log('Finding current position:', lat, lon, 'Zoom:', currentZoom);
+          map.setView([lat, lon], currentZoom);
           // Add temporary marker for current location
           L.marker([lat, lon]).addTo(map)
             .bindPopup('Your current location').openPopup();
@@ -226,6 +234,66 @@
       );
     } else {
       alert('Your browser does not support geolocation.');
+    }
+  }
+
+  // Toggle auto-update position
+  function toggleAutoUpdate() {
+    autoUpdateEnabled = !autoUpdateEnabled;
+    const button = document.getElementById('autoUpdateButton');
+    button.textContent = autoUpdateEnabled ? '📍 Disable Auto-Update Position' : '📍 Enable Auto-Update Position';
+    button.classList.toggle('active', autoUpdateEnabled);
+    console.log('Auto-update position:', autoUpdateEnabled ? 'enabled' : 'disabled');
+
+    if (autoUpdateEnabled) {
+      if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const currentZoom = map.getZoom(); // Persist current zoom level
+            console.log('Auto-updating position:', lat, lon, 'Zoom:', currentZoom);
+            map.setView([lat, lon], currentZoom);
+            // Update or add marker for current position
+            if (currentPositionMarker) {
+              currentPositionMarker.setLatLng([lat, lon]);
+            } else {
+              currentPositionMarker = L.marker([lat, lon]).addTo(map)
+                .bindPopup('Your current location').openPopup();
+            }
+          },
+          (error) => {
+            console.error('Geolocation error for auto-update:', error.message);
+            alert('Unable to retrieve your location for auto-update.');
+            autoUpdateEnabled = false;
+            button.textContent = '📍 Enable Auto-Update Position';
+            button.classList.remove('active');
+            if (watchId !== null) {
+              navigator.geolocation.clearWatch(watchId);
+              watchId = null;
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        alert('Your browser does not support geolocation.');
+        autoUpdateEnabled = false;
+        button.textContent = '📍 Enable Auto-Update Position';
+        button.classList.remove('active');
+      }
+    } else {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (currentPositionMarker) {
+        map.removeLayer(currentPositionMarker);
+        currentPositionMarker = null;
+      }
     }
   }
 
