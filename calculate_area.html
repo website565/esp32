@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Karta s pretragom</title>
+  <title>Map with Search</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #map { height: 80vh; }
@@ -35,13 +35,13 @@
 <body>
 
 <div id="controls">
-  <input type="text" id="searchInput" placeholder="Unesi mjesto ili grad..." />
-  <button onclick="searchLocation()">🔍 Traži</button>
+  <input type="text" id="searchInput" placeholder="Enter a place or city..." />
+  <button onclick="searchLocation()">🔍 Search</button>
   <br>
-  <button onclick="calculateArea()">📏 Izračunaj površinu</button>
-  <button onclick="removeLastPoint()">❌ Ukloni zadnju točku</button>
-  <button onclick="clearAll()">🧹 Očisti sve</button>
-  <button onclick="toggleLayer()">🗺️ Promijeni prikaz</button>
+  <button onclick="calculateArea()">📏 Calculate Area</button>
+  <button onclick="removeLastPoint()">❌ Remove Last Point</button>
+  <button onclick="clearAll()">🧹 Clear All</button>
+  <button onclick="toggleLayer()">🗺️ Toggle View</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
 </div>
@@ -55,7 +55,7 @@
   let polygonLayer = null;
   let currentLayer;
 
-  // Initialize map with default coordinates
+  // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
     map = L.map('map').setView([lat, lon], zoom);
 
@@ -72,6 +72,7 @@
     currentLayer = satelliteLayer;
     currentLayer.addTo(map);
 
+    // Handle map click to add markers
     map.on('click', function(e) {
       const lat = e.latlng.lat;
       const lon = e.latlng.lng;
@@ -85,6 +86,7 @@
       updateCoordinateList();
       redrawPolygon();
 
+      // Update coordinates on marker drag
       marker.on('dragend', function(e) {
         const newLatLng = e.target.getLatLng();
         const index = pointMarkers.indexOf(marker);
@@ -104,13 +106,13 @@
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
         initMap(lat, lon, 14); // Zoom closer for user's location
-        // Optionally add a marker for the user's location
+        // Add marker for user's location
         L.marker([lat, lon]).addTo(map)
-          .bindPopup('Vaša trenutna lokacija').openPopup();
+          .bindPopup('Your current location').openPopup();
       },
       (error) => {
         console.error("Geolocation error:", error.message);
-        alert("Nije moguće dobiti vašu lokaciju. Koristim zadane koordinate.");
+        alert("Unable to retrieve your location. Using default coordinates.");
         initMap(); // Fallback to default coordinates
       },
       {
@@ -120,23 +122,25 @@
       }
     );
   } else {
-    alert("Vaš preglednik ne podržava geolokaciju. Koristim zadane koordinate.");
+    alert("Your browser does not support geolocation. Using default coordinates.");
     initMap(); // Fallback to default coordinates
   }
 
+  // Update the list of coordinates
   function updateCoordinateList() {
     const div = document.getElementById('coordinates');
     if (clickedPoints.length === 0) {
-      div.innerHTML = "<em>Nema točaka.</em>";
+      div.innerHTML = "<em>No points.</em>";
       document.getElementById('areaDisplay').innerHTML = "";
       return;
     }
-    div.innerHTML = `<strong>Točke:</strong><br>` +
+    div.innerHTML = `<strong>Points:</strong><br>` +
       clickedPoints.map((p, i) =>
         `📍 ${i + 1}: Lat: <strong>${p[1].toFixed(6)}</strong>, Lon: <strong>${p[0].toFixed(6)}</strong><br>`
       ).join("");
   }
 
+  // Redraw the polygon and update area
   function redrawPolygon() {
     if (polygonLayer) {
       map.removeLayer(polygonLayer);
@@ -154,6 +158,7 @@
     }
   }
 
+  // Calculate and display the area
   function calculateAndDisplayArea() {
     if (clickedPoints.length < 3) {
       document.getElementById('areaDisplay').innerHTML = "";
@@ -162,20 +167,22 @@
     const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
     const area = turf.area(polygon);
     const hectares = (area / 10000).toFixed(2);
-    document.getElementById('areaDisplay').innerHTML = `Površina: ${hectares} ha (${area.toFixed(0)} m²)`;
+    document.getElementById('areaDisplay').innerHTML = `Area: ${hectares} ha (${area.toFixed(0)} m²)`;
   }
 
+  // Calculate area and show in alert
   function calculateArea() {
     if (clickedPoints.length < 3) {
-      alert("Dodajte najmanje 3 točke za izračun površine.");
+      alert("Add at least 3 points to calculate the area.");
       return;
     }
     const polygon = turf.polygon([[...clickedPoints, clickedPoints[0]]]);
     const area = turf.area(polygon);
     const hectares = (area / 10000).toFixed(2);
-    alert(`Površina: ${hectares} ha (${area.toFixed(0)} m²)`);
+    alert(`Area: ${hectares} ha (${area.toFixed(0)} m²)`);
   }
 
+  // Remove the last point
   function removeLastPoint() {
     if (pointMarkers.length === 0) return;
     const marker = pointMarkers.pop();
@@ -185,6 +192,7 @@
     redrawPolygon();
   }
 
+  // Clear all points and polygon
   function clearAll() {
     pointMarkers.forEach(m => map.removeLayer(m));
     pointMarkers = [];
@@ -197,12 +205,14 @@
     document.getElementById('areaDisplay').innerHTML = "";
   }
 
+  // Toggle between street and satellite layers
   function toggleLayer() {
     map.removeLayer(currentLayer);
     currentLayer = (currentLayer === streetLayer) ? satelliteLayer : streetLayer;
     map.addLayer(currentLayer);
   }
 
+  // Search for a location
   function searchLocation() {
     const query = document.getElementById("searchInput").value;
     if (!query) return;
@@ -218,14 +228,14 @@
           const lon = parseFloat(data[0].lon);
           map.setView([lat, lon], 14);
           const marker = L.marker([lat, lon]).addTo(map);
-          marker.bindPopup(`Rezultat pretrage: ${query}`).openPopup();
+          marker.bindPopup(`Search result: ${query}`).openPopup();
         } else {
-          alert("Mjesto nije pronađeno.");
+          alert("Location not found.");
         }
       })
       .catch(error => {
         console.error("Geocoding error:", error);
-        alert("Greška pri pretrazi: " + error.message);
+        alert("Error during search: " + error.message);
       });
   }
 </script>
