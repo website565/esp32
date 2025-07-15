@@ -254,12 +254,15 @@
             const currentZoom = map.getZoom(); // Persist current zoom level
             console.log('Auto-updating position:', lat, lon, 'Zoom:', currentZoom);
             map.setView([lat, lon], currentZoom);
-            // Update or add marker for current position
+            // Update or add single marker for current position
             if (currentPositionMarker) {
               currentPositionMarker.setLatLng([lat, lon]);
+              currentPositionMarker.setPopupContent(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+              console.log('Updated existing marker position:', lat, lon);
             } else {
               currentPositionMarker = L.marker([lat, lon]).addTo(map)
-                .bindPopup('Your current location').openPopup();
+                .bindPopup(`Your current location: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+              console.log('Created new marker for current position:', lat, lon);
             }
           },
           (error) => {
@@ -271,6 +274,10 @@
             if (watchId !== null) {
               navigator.geolocation.clearWatch(watchId);
               watchId = null;
+            }
+            if (currentPositionMarker) {
+              map.removeLayer(currentPositionMarker);
+              currentPositionMarker = null;
             }
           },
           {
