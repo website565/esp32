@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Map with Save/Load Places</title>
+  <title>Map with Save/Load/Delete Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     #map { height: 80vh; }
@@ -48,6 +48,7 @@
     <option value="">Select a saved place...</option>
   </select>
   <button onclick="loadPlace()">📂 Load Place</button>
+  <button onclick="deletePlace()">🗑️ Delete Place</button>
   <br>
   <button onclick="calculateArea()">📏 Calculate Area</button>
   <button onclick="removeLastPoint()">❌ Remove Last Point</button>
@@ -402,6 +403,29 @@
     if (clickedPoints.length > 0) {
       map.setView([clickedPoints[0][1], clickedPoints[0][0]], map.getZoom());
     }
+  }
+
+  // Delete place from localStorage
+  function deletePlace() {
+    const select = document.getElementById('savedPlacesSelect');
+    const placeName = select.value;
+    if (!placeName) {
+      alert('Please select a place to delete.');
+      return;
+    }
+
+    let savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+    const placeExists = savedPlaces.find(p => p.name === placeName);
+    if (!placeExists) {
+      alert('Place not found.');
+      return;
+    }
+
+    savedPlaces = savedPlaces.filter(p => p.name !== placeName);
+    localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces));
+    console.log('Deleted place:', placeName);
+    alert(`Place "${placeName}" deleted successfully!`);
+    updateSavedPlacesDropdown();
   }
 
   // Update saved places dropdown
