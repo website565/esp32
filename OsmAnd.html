@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OsmAnd Karta u HTML-u</title>
+    <!-- Uključivanje Leaflet CSS-a -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Uključivanje Leaflet JavaScript-a -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Stil za mapu */
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Primjer OsmAnd karte</h1>
+    <!-- Div gdje će se prikazati karta -->
+    <div id="map"></div>
+
+    <script>
+        // Inicijalizacija karte s centrom na određenu lokaciju (npr. Zagreb)
+        var map = L.map('map').setView([45.8150, 15.9819], 13);
+
+        // Učitavanje OsmAnd-ovog stila karte (koristimo standardni OSM tile server)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Dodavanje markera (npr. na Trg bana Jelačića u Zagrebu)
+        var marker = L.marker([45.8131, 15.9775]).addTo(map);
+        marker.bindPopup("<b>Zdravo!</b><br>Ovo je Trg bana Jelačića.").openPopup();
+    </script>
+</body>
+</html>
