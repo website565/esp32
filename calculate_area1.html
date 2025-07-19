@@ -59,7 +59,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 </head>
 <body>
 
@@ -93,8 +92,8 @@
 
 <div id="addPointsModal">
   <h3>Add Multiple Points</h3>
-  <p>Enter coordinates in format: x, y (one per line, e.g., 582416.53234, 15355.09804)</p>
-  <textarea id="pointsInput" placeholder="582416.53234, 15355.09804"></textarea>
+  <p>Enter coordinates in format: latitude, longitude (one per line, e.g., 45.815399, 15.981656)</p>
+  <textarea id="pointsInput" placeholder="45.815399, 15.981656"></textarea>
   <br>
   <button onclick="addMultiplePoints()">Add Points</button>
   <button onclick="closeAddPointsModal()">Cancel</button>
@@ -114,9 +113,6 @@
   let watchId = null;
   let currentPositionMarker = null;
   let currentPlaceName = null; // Track currently loaded place
-
-  // Define coordinate systems for proj4
-  proj4.defs('EPSG:31276', '+proj=tmerc +lat_0=0 +lon_0=18 +k=0.9999 +x_0=6500000 +y_0=0 +ellps=bessel +towgs84=550.499,164.116,475.142,5.809,2.079,1.983,4.214 +units=m +no_defs');
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
@@ -574,6 +570,37 @@
     console.log(`Edited longitude for point ${index + 1}: ${lon.toFixed(6)}`);
   }
 
+  // Edit both coordinates of a point
+  function editPoint(index) {
+    if (index < 0 || index >= clickedPoints.length) {
+      alert('Invalid point selected.');
+      return;
+    }
+
+    const currentLat = clickedPoints[index][1];
+    const currentLon = clickedPoints[index][0];
+    const newLat = prompt(`Enter new latitude for point ${index + 1} (current: ${currentLat.toFixed(6)}):`, currentLat.toFixed(6));
+    if (newLat === null) return; // User cancelled
+
+    const newLon = prompt(`Enter new longitude for point ${index + 1} (current: ${currentLon.toFixed(6)}):`, currentLon.toFixed(6));
+    if (newLon === null) return; // User cancelled
+
+    const lat = parseFloat(newLat);
+    const lon = parseFloat(newLon);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      alert('Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.');
+      return;
+    }
+
+    clickedPoints[index] = [lon, lat];
+    pointMarkers[index].setLatLng([lat, lon]);
+    pointMarkers[index].setPopupContent(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+    updateCoordinateList();
+    redrawPolygon();
+    console.log(`Edited point ${index + 1}: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+  }
+
   // Remove a specific point
   function removePoint(index) {
     if (index < 0 || index >= clickedPoints.length) {
@@ -653,30 +680,16 @@
     const newPoints = [];
 
     for (const line of lines) {
-      const [x, y] = line.split(',').map(coord => parseFloat(coord.trim()));
-      if (isNaN(x) || isNaN(y)) {
-        alert(`Invalid coordinates in line: ${line}. Format must be x, y.`);
+      const [lat, lon] = line.split(',').map(coord => parseFloat(coord.trim()));
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        alert(`Invalid coordinates in line: ${line}. Latitude must be between -90 and 90, longitude between -180 and 180.`);
         closeAddPointsModal();
         return;
       }
-      // Convert from MGI Balkans Zone 6 (EPSG:31276) to WGS84
-      try {
-        const [lon, lat] = proj4('EPSG:31276', 'EPSG:4326', [x, y]);
-        if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-          alert(`Invalid converted coordinates for: ${line}.`);
-          closeAddPointsModal();
-          return;
-        }
-        newPoints.push({ lat, lon, x, y });
-      } catch (error) {
-        console.error(`Error converting coordinates: ${line}`, error);
-        alert(`Error converting coordinates: ${line}`);
-        closeAddPointsModal();
-        return;
-      }
+      newPoints.push({ lat, lon });
     }
 
-    newPoints.forEach(({ lat, lon, x, y }) => {
+    newPoints.forEach(({ lat, lon }) => {
       const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
         .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
       pointMarkers.push(marker);
@@ -694,7 +707,7 @@
         }
       });
 
-      console.log(`Added point from MGI Balkans: x=${x}, y=${y} -> Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+      console.log(`Added point: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
     });
 
     updateCoordinateList();
@@ -802,7 +815,7 @@
   // Search for a location
   function searchLocation() {
     const query = document.getElementById('searchInput').value;
-    if (!query) return;
+    if (!input) return;
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`, {
       headers: {
         'User-Agent': 'MyMapApp/1.0 (contact: your-email@example.com)'
