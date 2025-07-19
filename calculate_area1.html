@@ -30,13 +30,13 @@
       font-weight: bold;
       color: #2e2e2e;
     }
-    .edit-link {
+    .edit-link, .remove-link {
       color: blue;
       cursor: pointer;
       text-decoration: underline;
       margin-left: 10px;
     }
-    .edit-link:hover {
+    .edit-link:hover, .remove-link:hover {
       color: darkblue;
     }
   </style>
@@ -68,6 +68,7 @@
   <button onclick="addCurrentPosition()">📍 Add Current Position</button>
   <button onclick="findCurrentPosition()">📍 Find Current Position</button>
   <button id="autoUpdateButton" onclick="toggleAutoUpdate()">📍 Enable Auto-Update Position</button>
+  <button onclick="addNewPoint()">📍 Add New Point</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
 </div>
@@ -524,6 +525,61 @@
     console.log(`Edited point ${index + 1}: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
   }
 
+  // Remove a specific point
+  function removePoint(index) {
+    if (index < 0 || index >= clickedPoints.length) {
+      alert('Invalid point selected.');
+      return;
+    }
+
+    const marker = pointMarkers[index];
+    map.removeLayer(marker);
+    pointMarkers.splice(index, 1);
+    clickedPoints.splice(index, 1);
+    updateCoordinateList();
+    redrawPolygon();
+    console.log(`Removed point ${index + 1}`);
+  }
+
+  // Add a new point manually
+  function addNewPoint() {
+    const newLat = prompt('Enter latitude for new point:');
+    if (newLat === null) return; // User cancelled
+
+    const newLon = prompt('Enter longitude for new point:');
+    if (newLon === null) return; // User cancelled
+
+    const lat = parseFloat(newLat);
+    const lon = parseFloat(newLon);
+
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      alert('Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.');
+      return;
+    }
+
+    const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+      .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+
+    pointMarkers.push(marker);
+    clickedPoints.push([lon, lat]);
+
+    // Update coordinates on marker drag
+    marker.on('dragend', function(e) {
+      const newLatLng = e.target.getLatLng();
+      const index = pointMarkers.indexOf(marker);
+      if (index !== -1) {
+        clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+        marker.setPopupContent(`Lat: ${newLatLng.lat.toFixed(6)}, Lon: ${newLatLng.lng.toFixed(6)}`);
+        updateCoordinateList();
+        redrawPolygon();
+      }
+    });
+
+    updateCoordinateList();
+    redrawPolygon();
+    console.log(`Added new point: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+  }
+
   // Update the list of coordinates
   function updateCoordinateList() {
     const div = document.getElementById('coordinates');
@@ -535,7 +591,8 @@
     div.innerHTML = `<strong>Points:</strong><br>` +
       clickedPoints.map((p, i) =>
         `📍 ${i + 1}: Lat: <strong>${p[1].toFixed(6)}</strong>, Lon: <strong>${p[0].toFixed(6)}</strong> ` +
-        `<span class="edit-link" onclick="editPoint(${i})">[Edit]</span><br>`
+        `<span class="edit-link" onclick="editPoint(${i})">[Edit]</span> ` +
+        `<span class="remove-link" onclick="removePoint(${i})">[Remove]</span><br>`
       ).join('');
   }
 
