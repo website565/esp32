@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OsmAnd Map - Live Location</title>
-    <!-- Leaflet CSS and JS -->
+    <title>OsmAnd Map - Live Location with 3D</title>
+    <!-- Mapbox GL JS CSS and JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <!-- Leaflet CSS and JS for 2D fallback -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Cesium.js for 3D view -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.110/Build/Cesium/Cesium.js"></script>
-    <link href="https://cesium.com/downloads/cesiumjs/releases/1.110/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; display: none; } /* 2D map, full screen */
-        #cesiumContainer { height: 100vh; width: 100vw; } /* 3D map, full screen */
+        #map2D { height: 100vh; width: 100vw; display: none; } /* 2D map, full screen */
+        #map3D { height: 100vh; width: 100vw; } /* 3D map, full screen */
         #toggleView { 
             position: fixed; 
             top: 10px; 
@@ -28,35 +28,33 @@
             font-size: 16px; 
             cursor: pointer; 
         }
-        /* Hide Cesium widgets */
-        .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
-            display: none !important;
-        }
     </style>
 </head>
 <body>
     <button id="toggleView" onclick="toggleView()">Switch to 2D</button>
-    <div id="map"></div>
-    <div id="cesiumContainer"></div>
+    <div id="map2D"></div>
+    <div id="map3D"></div>
 
     <script>
         let is3DView = true; // Start with 3D view
-        let map, viewer, marker, entity;
+        let map2D, map3D, marker2D, marker3D;
+        let currentZoom = 15; // Store current zoom level
+        let lastLat, lastLng; // Store last known position
 
         // Function to toggle between 2D and 3D views
         function toggleView() {
             is3DView = !is3DView;
-            document.getElementById('map').style.display = is3DView ? 'none' : 'block';
-            document.getElementById('cesiumContainer').style.display = is3DView ? 'block' : 'none';
+            document.getElementById('map2D').style.display = is3DView ? 'none' : 'block';
+            document.getElementById('map3D').style.display = is3DView ? 'block' : 'none';
             document.getElementById('toggleView').innerText = is3DView ? 'Switch to 2D' : 'Switch to 3D';
-            if (!is3DView) map.invalidateSize(); // Ensure Leaflet map resizes correctly
+            if (!is3DView && map2D) map2D.invalidateSize(); // Ensure Leaflet map resizes correctly
         }
 
         // Initialize 2D Leaflet map
         function initLeafletMap(lat, lng) {
-            map = L.map('map', {
+            map2D = L.map('map2D', {
                 zoomControl: false // Remove zoom control for cleaner look
-            }).setView([lat, lng], 15);
+            }).setView([lat, lng], currentZoom);
             // OSM layer (similar to OsmAnd)
             const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
@@ -68,76 +66,80 @@
                 attribution: '© Esri'
             });
             // Add layers
-            osmLayer.addTo(map);
+            osmLayer.addTo(map2D);
             // Layer control
             const baseLayers = {
                 "OpenStreetMap": osmLayer,
                 "Satellite View": satelliteLayer
             };
-            L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+            L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map2D);
             // Marker for current location
-            marker = L.marker([lat, lng]).addTo(map).bindPopup("Your current location").openPopup();
+            marker2D = L.marker([lat, lng]).addTo(map2D).bindPopup("Your current location").openPopup();
+            // Update zoom level when user zooms
+            map2D.on('zoomend', () => {
+                currentZoom = map2D.getZoom();
+            });
         }
 
-        // Initialize 3D Cesium map
-        function initCesiumMap(lat, lng) {
-            // Replace with your Cesium Ion token
-            Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN';
+        // Initialize 3D Mapbox map
+        function initMapboxMap(lat, lng) {
+            // Optional: Add Mapbox token for satellite imagery (not required for OSM)
+            mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN'; // Replace with your token or leave empty for OSM
             try {
-                viewer = new Cesium.Viewer('cesiumContainer', {
-                    terrainProvider: Cesium.createWorldTerrain(), // 3D terrain
-                    imageryProvider: Cesium.createOpenStreetMapImageryProvider(), // OSM data
-                    baseLayerPicker: true, // Enable layer selection (OSM, satellite)
-                    animation: false, // Remove animation widget
-                    timeline: false, // Remove timeline
-                    geocoder: false, // Remove search
-                    homeButton: false, // Remove home button
-                    navigationHelpButton: false, // Remove help button
-                    sceneModePicker: false, // Remove scene mode picker
-                    fullscreenButton: false // Remove fullscreen button
+                map3D = new mapboxgl.Map({
+                    container: 'map3D',
+                    style: 'mapbox://styles/mapbox/satellite-streets-v12', // Satellite + streets (requires token)
+                    // Fallback to OSM if no token
+                    center: [lng, lat],
+                    zoom: currentZoom,
+                    pitch: 60, // Tilt for 3D effect
+                    bearing: 0, // Rotation
+                    antialias: true
                 });
-                // Set camera to current location
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 500),
-                    orientation: {
-                        heading: Cesium.Math.toRadians(0),
-                        pitch: Cesium.Math.toRadians(-45),
-                    }
+                // Add navigation control (zoom and rotation)
+                map3D.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+                // Add terrain for 3D effect (requires token for Mapbox terrain)
+                map3D.on('load', () => {
+                    map3D.addSource('mapbox-dem', {
+                        'type': 'raster-dem',
+                        'url': 'mapbox://mapbox.terrain-rgb'
+                    });
+                    map3D.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
                 });
                 // Add marker
-                entity = viewer.entities.add({
-                    position: Cesium.Cartesian3.fromDegrees(lng, lat),
-                    point: { pixelSize: 10, color: Cesium.Color.RED },
-                    label: { 
-                        text: 'Your location', 
-                        showBackground: true, 
-                        font: '14px sans-serif',
-                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                        pixelOffset: new Cesium.Cartesian2(0, -10)
-                    }
+                marker3D = new mapboxgl.Marker({ color: 'red' })
+                    .setLngLat([lng, lat])
+                    .setPopup(new mapboxgl.Popup().setText('Your current location'))
+                    .addTo(map3D);
+                // Update zoom level when user zooms
+                map3D.on('zoomend', () => {
+                    currentZoom = map3D.getZoom();
                 });
             } catch (error) {
-                console.error("Error initializing Cesium:", error);
-                alert("Failed to load 3D map. Please check your Cesium Ion token and internet connection.");
+                console.error("Error initializing Mapbox:", error);
+                alert("Failed to load 3D map. Please check your internet connection or Mapbox token.");
             }
         }
 
         // Update location for 2D and 3D maps
         function updateLocation(lat, lng) {
-            if (map && marker) {
-                map.setView([lat, lng], 15);
-                marker.setLatLng([lat, lng]);
-                marker.bindPopup("Your current location").openPopup();
-            }
-            if (viewer && entity) {
-                viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 500),
-                    orientation: {
-                        heading: Cesium.Math.toRadians(0),
-                        pitch: Cesium.Math.toRadians(-45),
-                    }
-                });
-                entity.position = Cesium.Cartesian3.fromDegrees(lng, lat);
+            // Only update view if location changed significantly to avoid zoom reset
+            const distanceThreshold = 0.001; // ~100 meters
+            if (!lastLat || !lastLng || 
+                Math.abs(lat - lastLat) > distanceThreshold || 
+                Math.abs(lng - lastLng) > distanceThreshold) {
+                if (map2D && marker2D) {
+                    map2D.setView([lat, lng], currentZoom);
+                    marker2D.setLatLng([lat, lng]);
+                    marker2D.bindPopup("Your current location").openPopup();
+                }
+                if (map3D && marker3D) {
+                    map3D.setCenter([lng, lat]);
+                    map3D.setZoom(currentZoom);
+                    marker3D.setLngLat([lng, lat]);
+                }
+                lastLat = lat;
+                lastLng = lng;
             }
         }
 
@@ -147,8 +149,10 @@
                 (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
+                    lastLat = lat;
+                    lastLng = lng;
                     initLeafletMap(lat, lng);
-                    initCesiumMap(lat, lng);
+                    initMapboxMap(lat, lng);
                     // Start watching for location updates
                     navigator.geolocation.watchPosition(
                         (pos) => {
@@ -166,14 +170,14 @@
                     alert("Unable to get location. Using default location (Zagreb).");
                     // Fallback to Zagreb
                     initLeafletMap(45.8150, 15.9819);
-                    initCesiumMap(45.8150, 15.9819);
+                    initMapboxMap(45.8150, 15.9819);
                 }
             );
         } else {
             alert("Geolocation is not supported by your browser.");
             // Fallback to Zagreb
             initLeafletMap(45.8150, 15.9819);
-            initCesiumMap(45.8150, 15.9819);
+            initMapboxMap(45.8150, 15.9819);
         }
     </script>
 </body>
