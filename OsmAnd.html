@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OsmAnd Karta - Puna Stranica</title>
-    <!-- Leaflet CSS i JS -->
+    <title>OsmAnd Map - Full Screen</title>
+    <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Cesium.js za 3D prikaz -->
+    <!-- Cesium.js for 3D view -->
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.110/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.110/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; display: none; } /* 2D mapa, puna stranica */
-        #cesiumContainer { height: 100vh; width: 100vw; } /* 3D mapa, puna stranica */
+        #map { height: 100vh; width: 100vw; display: none; } /* 2D map, full screen */
+        #cesiumContainer { height: 100vh; width: 100vw; } /* 3D map, full screen */
         #toggleView { 
             position: fixed; 
             top: 10px; 
@@ -28,95 +28,101 @@
             font-size: 16px; 
             cursor: pointer; 
         }
-        /* Skrivanje Cesium widgeta */
+        /* Hide Cesium widgets */
         .cesium-viewer-toolbar, .cesium-viewer-animationContainer, .cesium-viewer-timelineContainer {
             display: none !important;
         }
     </style>
 </head>
 <body>
-    <button id="toggleView" onclick="toggleView()">Prebaci na 2D</button>
+    <button id="toggleView" onclick="toggleView()">Switch to 2D</button>
     <div id="map"></div>
     <div id="cesiumContainer"></div>
 
     <script>
-        let is3DView = true; // Početni prikaz je 3D
+        let is3DView = true; // Start with 3D view
         let map, viewer;
 
-        // Funkcija za prebacivanje između 2D i 3D prikaza
+        // Function to toggle between 2D and 3D views
         function toggleView() {
             is3DView = !is3DView;
             document.getElementById('map').style.display = is3DView ? 'none' : 'block';
             document.getElementById('cesiumContainer').style.display = is3DView ? 'block' : 'none';
-            document.getElementById('toggleView').innerText = is3DView ? 'Prebaci na 2D' : 'Prebaci na 3D';
-            if (!is3DView) map.invalidateSize(); // Osigurava ispravan prikaz Leaflet karte nakon prebacivanja
+            document.getElementById('toggleView').innerText = is3DView ? 'Switch to 2D' : 'Switch to 3D';
+            if (!is3DView) map.invalidateSize(); // Ensure Leaflet map resizes correctly
         }
 
-        // Inicijalizacija 2D Leaflet karte
+        // Initialize 2D Leaflet map
         function initLeafletMap(lat, lng) {
             map = L.map('map', {
-                zoomControl: false // Uklanja kontrolu zooma za čistiji izgled
+                zoomControl: false // Remove zoom control for cleaner look
             }).setView([lat, lng], 15);
-            // OSM sloj (slično OsmAnd-u)
+            // OSM layer (similar to OsmAnd)
             const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             });
-            // Satelitski sloj (Esri World Imagery)
+            // Satellite layer (Esri World Imagery)
             const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 19,
                 attribution: '© Esri'
             });
-            // Dodavanje slojeva
+            // Add layers
             osmLayer.addTo(map);
-            // Kontrola za prebacivanje slojeva
+            // Layer control
             const baseLayers = {
                 "OpenStreetMap": osmLayer,
-                "Satelitski prikaz": satelliteLayer
+                "Satellite View": satelliteLayer
             };
             L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
-            // Marker za trenutnu lokaciju
-            L.marker([lat, lng]).addTo(map).bindPopup("Vaša trenutna lokacija").openPopup();
+            // Marker for current location
+            L.marker([lat, lng]).addTo(map).bindPopup("Your current location").openPopup();
         }
 
-        // Inicijalizacija 3D Cesium karte
+        // Initialize 3D Cesium map
         function initCesiumMap(lat, lng) {
-            Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN'; // Zamijenite s vašim Cesium Ion tokenom
-            viewer = new Cesium.Viewer('cesiumContainer', {
-                terrainProvider: Cesium.createWorldTerrain(), // 3D teren
-                imageryProvider: Cesium.createOpenStreetMapImageryProvider(), // OSM podaci
-                baseLayerPicker: true, // Omogućava biranje slojeva (OSM, satelitski)
-                animation: false, // Uklanja animacijski widget
-                timeline: false, // Uklanja vremensku traku
-                geocoder: false, // Uklanja pretraživač
-                homeButton: false, // Uklanja gumb za početnu poziciju
-                navigationHelpButton: false, // Uklanja pomoćni gumb
-                sceneModePicker: false, // Uklanja birač prikaza
-                fullscreenButton: false // Uklanja gumb za puni zaslon
-            });
-            // Postavljanje kamere na trenutnu lokaciju
-            viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 500),
-                orientation: {
-                    heading: Cesium.Math.toRadians(0),
-                    pitch: Cesium.Math.toRadians(-45),
-                }
-            });
-            // Dodavanje markera
-            viewer.entities.add({
-                position: Cesium.Cartesian3.fromDegrees(lng, lat),
-                point: { pixelSize: 10, color: Cesium.Color.RED },
-                label: { 
-                    text: 'Vaša lokacija', 
-                    showBackground: true, 
-                    font: '14px sans-serif',
-                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                    pixelOffset: new Cesium.Cartesian2(0, -10)
-                }
-            });
+            // Replace with your Cesium Ion token
+            Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN';
+            try {
+                viewer = new Cesium.Viewer('cesiumContainer', {
+                    terrainProvider: Cesium.createWorldTerrain(), // 3D terrain
+                    imageryProvider: Cesium.createOpenStreetMapImageryProvider(), // OSM data
+                    baseLayerPicker: true, // Enable layer selection (OSM, satellite)
+                    animation: false, // Remove animation widget
+                    timeline: false, // Remove timeline
+                    geocoder: false, // Remove search
+                    homeButton: false, // Remove home button
+                    navigationHelpButton: false, // Remove help button
+                    sceneModePicker: false, // Remove scene mode picker
+                    fullscreenButton: false // Remove fullscreen button
+                });
+                // Set camera to current location
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 500),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-45),
+                    }
+                });
+                // Add marker
+                viewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat),
+                    point: { pixelSize: 10, color: Cesium.Color.RED },
+                    label: { 
+                        text: 'Your location', 
+                        showBackground: true, 
+                        font: '14px sans-serif',
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -10)
+                    }
+                });
+            } catch (error) {
+                console.error("Error initializing Cesium:", error);
+                alert("Failed to load 3D map. Please check your Cesium Ion token and internet connection.");
+            }
         }
 
-        // Dobivanje trenutne lokacije
+        // Get current location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -126,15 +132,16 @@
                     initCesiumMap(lat, lng);
                 },
                 (error) => {
-                    console.error("Greška pri dohvaćanju lokacije:", error);
-                    // Fallback na Zagreb ako lokacija nije dostupna
+                    console.error("Error getting location:", error);
+                    alert("Unable to get location. Using default location (Zagreb).");
+                    // Fallback to Zagreb
                     initLeafletMap(45.8150, 15.9819);
                     initCesiumMap(45.8150, 15.9819);
                 }
             );
         } else {
-            alert("Geolokacija nije podržana u vašem pregledniku.");
-            // Fallback na Zagreb
+            alert("Geolocation is not supported by your browser.");
+            // Fallback to Zagreb
             initLeafletMap(45.8150, 15.9819);
             initCesiumMap(45.8150, 15.9819);
         }
