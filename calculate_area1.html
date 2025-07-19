@@ -7,7 +7,7 @@
   <style>
     #map { height: 80vh; }
     #controls { padding: 10px; font-family: sans-serif; }
-    input[type="text"], select {
+    input[type="text"], select, textarea {
       padding: 8px;
       width: 70%;
       font-size: 16px;
@@ -30,19 +30,36 @@
       font-weight: bold;
       color: #2e2e2e;
     }
-    .edit-link, .remove-link {
+    .edit-link, .remove-link, .coord-link {
       color: blue;
       cursor: pointer;
       text-decoration: underline;
       margin-left: 10px;
     }
-    .edit-link:hover, .remove-link:hover {
+    .edit-link:hover, .remove-link:hover, .coord-link:hover {
       color: darkblue;
+    }
+    #addPointsModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    #addPointsModal textarea {
+      width: 100%;
+      height: 100px;
     }
   </style>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.5/proj4.js"></script>
 </head>
 <body>
 
@@ -68,9 +85,19 @@
   <button onclick="addCurrentPosition()">📍 Add Current Position</button>
   <button onclick="findCurrentPosition()">📍 Find Current Position</button>
   <button id="autoUpdateButton" onclick="toggleAutoUpdate()">📍 Enable Auto-Update Position</button>
+  <button onclick="openAddPointsModal()">📍 Add Multiple Points</button>
   <button onclick="addNewPoint()">📍 Add New Point</button>
   <div id="coordinates"></div>
   <div id="areaDisplay"></div>
+</div>
+
+<div id="addPointsModal">
+  <h3>Add Multiple Points</h3>
+  <p>Enter coordinates in format: x, y (one per line, e.g., 582416.53234, 15355.09804)</p>
+  <textarea id="pointsInput" placeholder="582416.53234, 15355.09804"></textarea>
+  <br>
+  <button onclick="addMultiplePoints()">Add Points</button>
+  <button onclick="closeAddPointsModal()">Cancel</button>
 </div>
 
 <div id="map"></div>
@@ -87,6 +114,9 @@
   let watchId = null;
   let currentPositionMarker = null;
   let currentPlaceName = null; // Track currently loaded place
+
+  // Define coordinate systems for proj4
+  proj4.defs('EPSG:31276', '+proj=tmerc +lat_0=0 +lon_0=18 +k=0.9999 +x_0=6500000 +y_0=0 +ellps=bessel +towgs84=550.499,164.116,475.142,5.809,2.079,1.983,4.214 +units=m +no_defs');
 
   // Initialize map with given coordinates and zoom level
   function initMap(lat = 45.0, lon = 15.0, zoom = 6) {
@@ -494,35 +524,54 @@
     console.log('Updated saved places dropdown:', savedPlaces.map(p => p.name));
   }
 
-  // Edit a point's coordinates
-  function editPoint(index) {
+  // Edit latitude of a point
+  function editLat(index) {
     if (index < 0 || index >= clickedPoints.length) {
       alert('Invalid point selected.');
       return;
     }
 
     const currentLat = clickedPoints[index][1];
-    const currentLon = clickedPoints[index][0];
     const newLat = prompt(`Enter new latitude for point ${index + 1} (current: ${currentLat.toFixed(6)}):`, currentLat.toFixed(6));
     if (newLat === null) return; // User cancelled
 
-    const newLon = prompt(`Enter new longitude for point ${index + 1} (current: ${currentLon.toFixed(6)}):`, currentLon.toFixed(6));
-    if (newLon === null) return; // User cancelled
-
     const lat = parseFloat(newLat);
-    const lon = parseFloat(newLon);
-
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      alert('Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.');
+    if (isNaN(lat) || lat < -90 || lat > 90) {
+      alert('Invalid latitude. Must be between -90 and 90.');
       return;
     }
 
-    clickedPoints[index] = [lon, lat];
-    pointMarkers[index].setLatLng([lat, lon]);
-    pointMarkers[index].setPopupContent(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+    clickedPoints[index][1] = lat;
+    pointMarkers[index].setLatLng([lat, clickedPoints[index][0]]);
+    pointMarkers[index].setPopupContent(`Lat: ${lat.toFixed(6)}, Lon: ${clickedPoints[index][0].toFixed(6)}`);
     updateCoordinateList();
     redrawPolygon();
-    console.log(`Edited point ${index + 1}: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+    console.log(`Edited latitude for point ${index + 1}: ${lat.toFixed(6)}`);
+  }
+
+  // Edit longitude of a point
+  function editLon(index) {
+    if (index < 0 || index >= clickedPoints.length) {
+      alert('Invalid point selected.');
+      return;
+    }
+
+    const currentLon = clickedPoints[index][0];
+    const newLon = prompt(`Enter new longitude for point ${index + 1} (current: ${currentLon.toFixed(6)}):`, currentLon.toFixed(6));
+    if (newLon === null) return; // User cancelled
+
+    const lon = parseFloat(newLon);
+    if (isNaN(lon) || lon < -180 || lon > 180) {
+      alert('Invalid longitude. Must be between -180 and 180.');
+      return;
+    }
+
+    clickedPoints[index][0] = lon;
+    pointMarkers[index].setLatLng([clickedPoints[index][1], lon]);
+    pointMarkers[index].setPopupContent(`Lat: ${clickedPoints[index][1].toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+    updateCoordinateList();
+    redrawPolygon();
+    console.log(`Edited longitude for point ${index + 1}: ${lon.toFixed(6)}`);
   }
 
   // Remove a specific point
@@ -580,6 +629,79 @@
     console.log(`Added new point: Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
   }
 
+  // Open modal for adding multiple points
+  function openAddPointsModal() {
+    document.getElementById('addPointsModal').style.display = 'block';
+  }
+
+  // Close modal for adding multiple points
+  function closeAddPointsModal() {
+    document.getElementById('addPointsModal').style.display = 'none';
+    document.getElementById('pointsInput').value = '';
+  }
+
+  // Add multiple points from textarea
+  function addMultiplePoints() {
+    const input = document.getElementById('pointsInput').value.trim();
+    if (!input) {
+      alert('Please enter at least one point.');
+      closeAddPointsModal();
+      return;
+    }
+
+    const lines = input.split('\n').map(line => line.trim()).filter(line => line);
+    const newPoints = [];
+
+    for (const line of lines) {
+      const [x, y] = line.split(',').map(coord => parseFloat(coord.trim()));
+      if (isNaN(x) || isNaN(y)) {
+        alert(`Invalid coordinates in line: ${line}. Format must be x, y.`);
+        closeAddPointsModal();
+        return;
+      }
+      // Convert from MGI Balkans Zone 6 (EPSG:31276) to WGS84
+      try {
+        const [lon, lat] = proj4('EPSG:31276', 'EPSG:4326', [x, y]);
+        if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+          alert(`Invalid converted coordinates for: ${line}.`);
+          closeAddPointsModal();
+          return;
+        }
+        newPoints.push({ lat, lon, x, y });
+      } catch (error) {
+        console.error(`Error converting coordinates: ${line}`, error);
+        alert(`Error converting coordinates: ${line}`);
+        closeAddPointsModal();
+        return;
+      }
+    }
+
+    newPoints.forEach(({ lat, lon, x, y }) => {
+      const marker = L.marker([lat, lon], { draggable: true }).addTo(map)
+        .bindPopup(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`).openPopup();
+      pointMarkers.push(marker);
+      clickedPoints.push([lon, lat]);
+
+      // Update coordinates on marker drag
+      marker.on('dragend', function(e) {
+        const newLatLng = e.target.getLatLng();
+        const index = pointMarkers.indexOf(marker);
+        if (index !== -1) {
+          clickedPoints[index] = [newLatLng.lng, newLatLng.lat];
+          marker.setPopupContent(`Lat: ${newLatLng.lat.toFixed(6)}, Lon: ${newLatLng.lng.toFixed(6)}`);
+          updateCoordinateList();
+          redrawPolygon();
+        }
+      });
+
+      console.log(`Added point from MGI Balkans: x=${x}, y=${y} -> Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+    });
+
+    updateCoordinateList();
+    redrawPolygon();
+    closeAddPointsModal();
+  }
+
   // Update the list of coordinates
   function updateCoordinateList() {
     const div = document.getElementById('coordinates');
@@ -590,7 +712,8 @@
     }
     div.innerHTML = `<strong>Points:</strong><br>` +
       clickedPoints.map((p, i) =>
-        `📍 ${i + 1}: Lat: <strong>${p[1].toFixed(6)}</strong>, Lon: <strong>${p[0].toFixed(6)}</strong> ` +
+        `📍 ${i + 1}: Lat: <span class="coord-link" onclick="editLat(${i})">${p[1].toFixed(6)}</span>, ` +
+        `Lon: <span class="coord-link" onclick="editLon(${i})">${p[0].toFixed(6)}</span> ` +
         `<span class="edit-link" onclick="editPoint(${i})">[Edit]</span> ` +
         `<span class="remove-link" onclick="removePoint(${i})">[Remove]</span><br>`
       ).join('');
