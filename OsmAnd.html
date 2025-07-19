@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OsmAnd Map - Full Screen</title>
+    <title>OsmAnd Map - Live Location</title>
     <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -41,7 +41,7 @@
 
     <script>
         let is3DView = true; // Start with 3D view
-        let map, viewer;
+        let map, viewer, marker, entity;
 
         // Function to toggle between 2D and 3D views
         function toggleView() {
@@ -76,7 +76,7 @@
             };
             L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
             // Marker for current location
-            L.marker([lat, lng]).addTo(map).bindPopup("Your current location").openPopup();
+            marker = L.marker([lat, lng]).addTo(map).bindPopup("Your current location").openPopup();
         }
 
         // Initialize 3D Cesium map
@@ -105,7 +105,7 @@
                     }
                 });
                 // Add marker
-                viewer.entities.add({
+                entity = viewer.entities.add({
                     position: Cesium.Cartesian3.fromDegrees(lng, lat),
                     point: { pixelSize: 10, color: Cesium.Color.RED },
                     label: { 
@@ -122,7 +122,26 @@
             }
         }
 
-        // Get current location
+        // Update location for 2D and 3D maps
+        function updateLocation(lat, lng) {
+            if (map && marker) {
+                map.setView([lat, lng], 15);
+                marker.setLatLng([lat, lng]);
+                marker.bindPopup("Your current location").openPopup();
+            }
+            if (viewer && entity) {
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(lng, lat, 500),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-45),
+                    }
+                });
+                entity.position = Cesium.Cartesian3.fromDegrees(lng, lat);
+            }
+        }
+
+        // Watch for location updates
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -130,9 +149,20 @@
                     const lng = position.coords.longitude;
                     initLeafletMap(lat, lng);
                     initCesiumMap(lat, lng);
+                    // Start watching for location updates
+                    navigator.geolocation.watchPosition(
+                        (pos) => {
+                            updateLocation(pos.coords.latitude, pos.coords.longitude);
+                        },
+                        (error) => {
+                            console.error("Error watching location:", error);
+                            alert("Unable to update location.");
+                        },
+                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    );
                 },
                 (error) => {
-                    console.error("Error getting location:", error);
+                    console.error("Error getting initial location:", error);
                     alert("Unable to get location. Using default location (Zagreb).");
                     // Fallback to Zagreb
                     initLeafletMap(45.8150, 15.9819);
